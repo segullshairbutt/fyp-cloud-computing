@@ -6,8 +6,9 @@ import zipfile
 
 from .models import Github, Docker, Kubernetes, Endpoints
 from .utilities import clone_repo, create_image, push_image, create_chart, deploy_chart
+from monitoring_app.monitoring_service import data_monitor
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("root")
 
 
 def clone_github_repo(clone_url, logged_in_user):
@@ -138,10 +139,40 @@ def deploy_project(project_url, logged_in_user):
         raise e
 
 
-def zip_dir(path):
+def zip_dir():
+    logger.info("Zipping directory.")
     zip_file = zipfile.ZipFile('Python.zip', 'w', zipfile.ZIP_DEFLATED)
 
-    for root, dirs, files in os.walk(path):
+    for root, dirs, files in os.walk("temp/"):
         for file in files:
             zip_file.write(os.path.join(root, file))
     zip_file.close()
+    logger.info("Zipping directory finished.")
+
+
+class Filepaths:
+    def __init__(self):
+        self.default_docker_filepath = None
+        self.docker_deployment_path = None
+        self.docker_image = None
+        self.config_data_path = None
+        self.yaml_filepath = None
+        self.helm_deployment_path = None
+
+
+def start_monitoring(github):
+    docker = Docker.objects.get(github=github)
+    kubernetes = Kubernetes.objects.get(docker=docker)
+
+    service_ports = kubernetes.endpoints_set.all()
+
+    paths = Filepaths()
+    paths.default_docker_filepath = docker.default_docker_filepath
+    paths.docker_deployment_path = docker.deployment_path
+    paths.docker_image = docker.docker_image
+    paths.config_data_path = kubernetes.config_data_path
+    paths.yaml_filepath = kubernetes.yaml_deployments
+    paths.helm_deployment_path = kubernetes.helm_deployments
+
+    data_monitor(paths, service_ports)
+    # main.run(docker, kubernetes, service_ports)

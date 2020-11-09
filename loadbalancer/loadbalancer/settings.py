@@ -37,7 +37,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'devops'
+    'devops',
+    'monitoring_app'
 ]
 
 MIDDLEWARE = [
@@ -122,15 +123,50 @@ STATIC_URL = '/static/'
 
 LOGGING = {
     'version': 1,
+    'color': {
+        '()': 'colorlog.ColoredFormatter',
+        'format': '%(log_color)s%(levelname)-8s %(message)s',
+        'log_colors': {
+            'DEBUG':    'bold_black',
+            'INFO':     'white',
+            'WARNING':  'yellow',
+            'ERROR':    'red',
+            'CRITICAL': 'bold_red',
+        },
+    },
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'style': '{',
+        },
+        'medium': {
+            'format': '{levelname} {asctime} {module} - {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '{levelname} {asctime} - {message}',
+            'style': '{',
+        }
+    },
     'handlers': {
         'console': {
             'class': 'logging.StreamHandler',
             'stream': sys.stdout,
+            'formatter': 'simple'
+        },
+        'mid-verbose-console': {
+            'class': 'logging.StreamHandler',
+            'stream': sys.stdout,
+            'formatter': 'medium'
         }
     },
     'loggers': {
         'root': {
             'handlers': ['console'],
+            'level': 'INFO'
+        },
+        'mid-verbose': {
+            'handlers': ['mid-verbose-console'],
             'level': 'INFO'
         }
     }
