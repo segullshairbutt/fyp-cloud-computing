@@ -108,18 +108,18 @@ def get_container_template():
 
 def get_docker_image(expose_port):
     return '''FROM node:alpine
-              WORKDIR /usr/src/app
-              COPY package*.json ./
+WORKDIR /usr/src/app
+COPY package*.json ./
 
-              RUN npm install
-              # If you are building your code for production
-              # RUN npm ci --only=production
+RUN npm install
+# If you are building your code for production
+# RUN npm ci --only=production
 
-              # Bundle app source
-              COPY . .
+# Bundle app source
+COPY . .
 
-              EXPOSE {}
-              CMD [ "node", "server.js" ]'''.format(expose_port)
+EXPOSE {}
+CMD [ "node", "server.js" ]'''.format(expose_port)
 
 
 def get_service_template():
@@ -129,14 +129,13 @@ def get_service_template():
 
 
 def get_values_file_content(docker_image, expose_port, deployment_name):
-    return f"""
-image:
+    return f"""image:
   repository: """ + docker_image + """
-    tag: latest
+  tag: latest
 replicaCount: 1
 service:
   type: LoadBalancer
-  targetPort: """ + expose_port + """
+  targetPort: """ + str(expose_port) + """
 name: """ + deployment_name
 
 
@@ -150,7 +149,7 @@ version: 1
 
 
 def get_deployment_file_content(deployment_name):
-    return"""apiVersion: apps/v1
+    return """apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ .Values.name }}
@@ -168,9 +167,9 @@ spec:
     spec:
       containers:
       - name: container-""" + deployment_name + """
-                    image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
-                    ports:
-                    - containerPort: {{ .Values.service.targetPort }}"""
+      image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+      ports:
+      - containerPort: {{ .Values.service.targetPort }}"""
 
 
 def get_services_template():

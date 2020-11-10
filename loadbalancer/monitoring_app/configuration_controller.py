@@ -7,7 +7,7 @@ import logging
 
 import yaml
 
-from .templates import get_initial_service_content, get_initial_deployment_content, get_container_template, \
+from .deployment_file_templates import get_initial_service_content, get_initial_deployment_content, get_container_template, \
     get_docker_image, get_service_template, get_values_file_content, get_chart_file_content, \
     get_deployment_file_content, get_services_template
 
@@ -83,7 +83,7 @@ def generate_helm_deployments(tag, configuration, docker_image, expose_ports, he
 
             # writing values.yaml file
             with open(os.path.join(helm_chart_path, 'values.yaml'), "w") as file:
-                file.write(get_values_file_content(docker_image, expose_ports[1], deployment_name))
+                file.write(get_values_file_content(docker_image, expose_ports, deployment_name))
                 logger.info("values.yaml files written..")
 
             # writing chart.yaml file
@@ -132,7 +132,8 @@ def generate_helm_deployments(tag, configuration, docker_image, expose_ports, he
 
 
 def generate_deployment_files(tag, filepaths):
-    print("generating files for tag: ", tag)
+    verbose_logger.info("Generating deployment files.")
+
     filename = str(tag) + 'config.json'
     filepath = os.path.join(filepaths.config_data_path, filename)
     # reading the configuration file
@@ -140,13 +141,14 @@ def generate_deployment_files(tag, filepaths):
         data = f.read()
         configuration = json.loads(data)
 
-    # ceating the expose port from  default clone project's dockerfile
+    # creating the expose port from  default clone project's dockerfile
     expose_port = 3000  # default port
     # open docker file to get expose port
     with open(filepaths.default_docker_filepath, "r") as dockerfile:
         for content in dockerfile:
             if "EXPOSE" in content:
-                expose_port = content.split()
+                # getting expose port from DOCKERFILE
+                expose_port = int(content.split()[1])
 
     generate_docker_yaml_files(tag, expose_port, filepaths.docker_deployment_path, configuration,
                                filepaths.yaml_filepath)
