@@ -1,7 +1,10 @@
-def get_initial_configuration_template(service_ports):
+import json
+
+
+def get_configuration_template():
     return [
         {
-            "pod": {
+            "pod1": {
                 "name": "pod1",
                 "metrics": {
                     "CPU": "",
@@ -14,43 +17,34 @@ def get_initial_configuration_template(service_ports):
                             "load": "",
 
                         },
-                        "services": [
-                            {
-                                "port": str(service_ports[0]),
-                                "metrics": [
-                                    {
-                                        "load": ""
-                                    }]},
-                            {
-                                "port": str(service_ports[1]),
-                                "metrics": [
-                                    {
-                                        "load": ""
-                                    }]},
-                            {
-                                "port": str(service_ports[2]),
-                                "metrics": [
-                                    {
-                                        "load": ""
-                                    }]},
-                            {
-                                "port": str(service_ports[3]),
-                                "metrics": [
-                                    {
-                                        "load": ""
-                                    }]},
-                            {
-                                "port": str(service_ports[4]),
-                                "metrics": [
-                                    {
-                                        "load": ""
-                                    }]}
-                        ]  # services array close
+                        "services": []
                     }  # container 1 close
                 ]
             }
         }
     ]
+
+
+def generate_configuration_template(end_points):
+    config_object = get_configuration_template()
+    services = config_object[0]["pod1"]["containers"][0]["services"]
+
+    for end_point in end_points:
+        path = end_point.path
+        service_obj = {
+            "port": end_point.port,
+            "paths": {
+                path.name: {}
+            }
+        }
+        for method in path.method_set.all():
+            extra_fields = json.loads(method.extra_fields)
+            extra_fields["metrics"] = {"load": ""}
+            path_name = service_obj["paths"][path.name]
+            path_name[method.name] = extra_fields
+
+        services.append(service_obj)
+    return config_object
 
 
 def get_initial_service_content(deployment_name):

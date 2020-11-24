@@ -7,17 +7,21 @@ import logging
 
 import yaml
 
-from .deployment_file_templates import get_initial_service_content, get_initial_deployment_content, get_container_template, \
-    get_docker_image, get_service_template, get_values_file_content, get_chart_file_content, \
-    get_deployment_file_content, get_services_template
+from .deployment_file_templates import (get_initial_service_content,
+                                        get_initial_deployment_content,
+                                        get_container_template,
+                                        get_docker_image, get_service_template,
+                                        get_values_file_content,
+                                        get_chart_file_content,
+                                        get_deployment_file_content, get_services_template)
 
-verbose_logger = logging.getLogger("mid-verbose")
-logger = logging.getLogger("root")
+VERBOSE_LOGGER = logging.getLogger("mid-verbose")
+LOGGER = logging.getLogger("root")
 
 
 def generate_docker_yaml_files(
         tag, expose_port, docker_deployment_path, configuration, yaml_filepath):
-    verbose_logger.info("generating docker & yaml files.")
+    VERBOSE_LOGGER.info("generating docker & yaml files.")
 
     container_counter = 1
     services_counter = 1
@@ -53,23 +57,23 @@ def generate_docker_yaml_files(
             docker_file_path = os.path.join(docker_deployment_path, docker_file_name)
             with open(docker_file_path, 'w') as dockerFile:
                 dockerFile.write(docker_image_content)
-                logger.info("docker image file written.")
+                LOGGER.info("docker image file written.")
 
             with open(os.path.join(yaml_filepath, str(tag) + "-" + str(container_counter) + "services.yaml"),
                       "w") as file:
                 yaml.dump(deployment_services, file)
-                logger.info("deployment services file written.")
+                LOGGER.info("deployment services file written.")
 
             with open(os.path.join(yaml_filepath, str(tag) + "-" + str(container_counter) + "deployment.yaml"),
                       "w") as file:
                 yaml.dump(deployment, file)
-                logger.info("deployment file written.")
+                LOGGER.info("deployment file written.")
 
             container_counter = container_counter + 1
 
 
 def generate_helm_deployments(tag, configuration, docker_image, expose_ports, helm_deployment_path):
-    verbose_logger.info("generating helm deployment files.")
+    VERBOSE_LOGGER.info("generating helm deployment files.")
     for content in configuration:
         container_counter = 1
 
@@ -84,12 +88,12 @@ def generate_helm_deployments(tag, configuration, docker_image, expose_ports, he
             # writing values.yaml file
             with open(os.path.join(helm_chart_path, 'values.yaml'), "w") as file:
                 file.write(get_values_file_content(docker_image, expose_ports, deployment_name))
-                logger.info("values.yaml files written..")
+                LOGGER.info("values.yaml files written..")
 
             # writing chart.yaml file
             with open(os.path.join(helm_chart_path, 'Chart.yaml'), "w") as file:
                 file.write(get_chart_file_content(deployment_name))
-                logger.info("chart.yaml files written..")
+                LOGGER.info("chart.yaml files written..")
 
             services_path = os.path.join(template_dir, 'service.yaml')
             deployment_path = os.path.join(template_dir, 'deployment.yaml')
@@ -97,7 +101,7 @@ def generate_helm_deployments(tag, configuration, docker_image, expose_ports, he
             # writing deployment.yaml file
             with open(deployment_path, "w") as file:
                 file.write(get_deployment_file_content(deployment_name))
-                logger.info("deployment.yaml files written..")
+                LOGGER.info("deployment.yaml files written..")
 
             # write services.yaml file
             services = get_services_template()
@@ -118,7 +122,7 @@ def generate_helm_deployments(tag, configuration, docker_image, expose_ports, he
 
             with open(services_path, "w") as file:
                 yaml.dump(services, file)
-                logger.info("services are written to")
+                LOGGER.info("services are written to")
 
             # creating the zip file
             zip_path = os.path.join(helm_deployment_path, file_tags + '-chart.zip')
@@ -132,7 +136,7 @@ def generate_helm_deployments(tag, configuration, docker_image, expose_ports, he
 
 
 def generate_deployment_files(tag, filepaths):
-    verbose_logger.info("Generating deployment files.")
+    VERBOSE_LOGGER.info("Generating deployment files.")
 
     filename = str(tag) + 'config.json'
     filepath = os.path.join(filepaths.config_data_path, filename)

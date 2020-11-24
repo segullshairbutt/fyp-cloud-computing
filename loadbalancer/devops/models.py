@@ -1,9 +1,9 @@
+from jsonfield import JSONField
 from django.db import models
 from django.contrib.auth.models import User
 
 
 class Github(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
     url = models.URLField(primary_key=True, blank=False, null=False)
     cloned_directory = models.CharField(max_length=200, blank=False, null=False)
 
@@ -12,7 +12,7 @@ class Github(models.Model):
 
 
 class Docker(models.Model):
-    github = models.OneToOneField(Github, on_delete=models.CASCADE)
+    github = models.OneToOneField(Github, on_delete=models.CASCADE, related_name="docker_profile")
     docker_image = models.CharField(max_length=200, blank=False, null=False)
     default_docker_filepath = models.CharField(max_length=200, blank=False, null=False)
     deployment_path = models.CharField(max_length=200, blank=False, null=False)
@@ -22,7 +22,7 @@ class Docker(models.Model):
 
 
 class Kubernetes(models.Model):
-    docker = models.OneToOneField(Docker, on_delete=models.CASCADE)
+    docker = models.OneToOneField(Docker, on_delete=models.CASCADE, related_name="kubernetes_profile")
     deployment_name = models.CharField(max_length=100, blank=False, null=False)
     config_data_path = models.CharField(max_length=200, blank=False, null=False)
     yaml_deployments = models.CharField(max_length=200, blank=False, null=False)
@@ -39,3 +39,20 @@ class Endpoints(models.Model):
 
     def __str__(self):
         return str(self.ports)
+
+
+class Path(models.Model):
+    name = models.CharField(max_length=50)
+
+
+class Method(models.Model):
+    name = models.CharField(max_length=10)
+    extra_fields = JSONField()
+
+    path = models.ForeignKey(Path, on_delete=models.CASCADE)
+
+
+class Endpoint(models.Model):
+    kubernetes = models.ForeignKey(Kubernetes, on_delete=models.CASCADE)
+    port = models.PositiveIntegerField(primary_key=True)
+    path = models.OneToOneField(Path, on_delete=models.CASCADE, related_name="endpoint_path")

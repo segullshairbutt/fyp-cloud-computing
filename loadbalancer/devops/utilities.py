@@ -9,40 +9,40 @@ from .files_formatter import (
     get_deployment_file_format, get_service_file_format)
 
 # getting logger object defined in setting.py
-logger = logging.getLogger("root")
+LOGGER = logging.getLogger("root")
 
 
 def clone_repo(url, cloning_directory):
     try:
-        logger.info("started cloning directory.")
+        LOGGER.info("started cloning directory.")
         cloned_repo = Repo.clone_from(url, cloning_directory)
         cloned_repo.close()
-        logger.debug("repo cloned.")
+        LOGGER.debug("repo cloned.")
         return True
 
     except Exception as e:
-        logger.error("Error on cloning", e)
+        LOGGER.error("Error on cloning", e)
         return False
 
 
 def create_image(docker):
     """Creating an image from given working directory which contains a dockerfile."""
-    logger.info(msg="started creating image.")
+    LOGGER.info(msg="started creating image.")
     subprocess.call(
         ['docker', 'build', '-t', f"{docker.docker_image}:fyp_kubernetes", '.'],
         cwd=docker.github.cloned_directory)
-    logger.debug(msg="finished creating image.")
+    LOGGER.debug(msg="finished creating image.")
 
 
 def push_image(docker):
     """Pushing the image to Dockerhub dockerfile."""
-    logger.info(msg="pushing the image.")
+    LOGGER.info(msg="pushing the image.")
     subprocess.call(['docker', 'push', f"{docker.docker_image}:fyp_kubernetes"])
-    logger.info(msg="finished pushing the image.")
+    LOGGER.info(msg="finished pushing the image.")
 
 
 def create_chart(kuburnetes, services_ports):
-    logger.info("creating chart.")
+    LOGGER.info("creating chart.")
     docker_image = str(kuburnetes.docker.docker_image)
     DOCKERFILE_PATH = kuburnetes.docker.default_docker_filepath
     EXPOSE_PORT = 3000  # default port
@@ -70,21 +70,21 @@ def create_chart(kuburnetes, services_ports):
     # writing service.yaml file
     with open(services_path, 'w')as file:
         file.write(get_service_file_format(services_ports))
-    logger.info("finished creating chart.")
+    LOGGER.info("finished creating chart.")
 
 
 def deploy_chart(kuburnetes):
-    logger.info("deploying chart.")
+    LOGGER.info("deploying chart.")
     clone_dir = os.path.dirname(kuburnetes.docker.default_docker_filepath)
     helm_chart_name = os.path.basename(kuburnetes.def_helmchart_path)
-    logger.debug("Helm Chart name.", helm_chart_name)
+    LOGGER.debug("Helm Chart name.", helm_chart_name)
     subprocess.call(
         ['helm', 'install', kuburnetes.deployment_name, helm_chart_name], cwd=clone_dir)
-    logger.debug("finished deploying the chart.")
+    LOGGER.debug("finished deploying the chart.")
 
 
 def get_config_data_file(kuburnetes, file_type, filename):
-    logger.info("getting config data file.")
+    LOGGER.info("getting config data file.")
     helm_template_dir = os.path.join(kuburnetes.def_helmchart_path, 'templates')
     if file_type == "defDocker":
         filepath = kuburnetes.docker.default_docker_filepath
@@ -108,5 +108,5 @@ def get_config_data_file(kuburnetes, file_type, filename):
     with open(filepath, "r") as file:
         for data in file:
             file_content.append(data)
-    logger.debug("finished getting config data file.")
+    LOGGER.debug("finished getting config data file.")
     return file_content

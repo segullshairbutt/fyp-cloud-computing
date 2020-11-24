@@ -1,77 +1,79 @@
+import json
 import os
 import logging
 import subprocess
 # import tempfile
 import zipfile
+from copy import deepcopy
+from random import choice
 
-from .models import Github, Docker, Kubernetes, Endpoints
+from .constants import METHOD_TEMPLATE
+from .models import Github, Docker, Kubernetes, Endpoints, Endpoint, Method, Path
 from .utilities import clone_repo, create_image, push_image, create_chart, deploy_chart
 from monitoring_app.monitoring_service import data_monitor
 
-logger = logging.getLogger("root")
+LOGGER = logging.getLogger("root")
 
 
-def clone_github_repo(clone_url, logged_in_user):
+def clone_github_repo(clone_url, dir_name):
     try:
-        git_repo = Github.objects.filter(user=logged_in_user, url=clone_url)
+        git_repo = Github.objects.filter(url=clone_url)
         if not git_repo:
-            DIR = os.getcwd()
-            DIR = os.path.join(DIR, str(logged_in_user))
-            cloning_dir = DIR
-            # cloning_dir = tempfile.mkdtemp(dir=DIR)
+            cloning_dir = os.path.join(os.getcwd(), str(dir_name))
 
-            github = Github(user=logged_in_user, url=clone_url, cloned_directory=cloning_dir)
+            github = Github(url=clone_url, cloned_directory=cloning_dir)
 
             # cloning the repo in given directory
             if clone_repo(clone_url, cloning_dir):
                 github.save()
             else:
-                logger.error("Error: can't download the specified repo")
+                LOGGER.error("Error: can't download the specified repo")
                 raise AssertionError("Download failed.")
         else:
-            logger.error("Error: Repo already exists.")
+            LOGGER.error("Error: Repo already exists.")
     except Exception as e:
-        logger.error({"error": e})
+        LOGGER.error({"error": e})
 
 
-def delete_project(url, user):
-    logger.info("delete project")
-    github_project = Github.objects.filter(user=user, url=url)
+def delete_project(url):
+    LOGGER.info("delete project")
+    github = Github.objects.filter(url=url).first()
 
-    if not github_project:
+    if not github:
         raise AssertionError("no github projects found.")
 
-    docker = Docker.objects.filter(github=github_project[0])
+    docker = Docker.objects.filter(github=github).first()
 
     if not docker:
-        logger.warning("project isn't deployed.")
+        LOGGER.warning("project isn't deployed.")
     else:
-        docker_image = docker[0].docker_image
-        logger.info("Deleting docker image")
+        docker_image = docker.docker_image
+        LOGGER.info("Deleting docker image")
         subprocess.call(['docker', 'rmi', docker_image])
 
-        kubernetes = Kubernetes.objects.filter(docker=docker[0])
-        deployment_name = kubernetes[0].deployment_name
-        logger.info("uninstalling helm chart")
+        kubernetes = Kubernetes.objects.filter(docker=docker).first()
+        deployment_name = kubernetes.deployment_name
+        LOGGER.info("uninstalling helm chart")
         subprocess.call(['helm', 'uninstall', str(deployment_name)])
 
-    github_project.delete()
-    logger.info("delete project finished.")
+    github.delete()
+    LOGGER.info("delete project finished.")
 
 
-def deploy_project(project_url, logged_in_user):
-    github = Github.objects.filter(user=logged_in_user, url=project_url)
+def deploy_project(project_url, dir_name, api_name):
+    github = Github.objects.filter(url=project_url).first()
 
     if not github:
         raise AssertionError("No projects found with this url.")
 
-    docker = Docker.objects.filter(github=github[0])
+    docker = Docker.objects.filter(github=github).first()
+    # docker = Docker.objects.filter(github=github[0])
 
     if docker:
         raise AssertionError("url already deployed.")
 
     try:
-        cloned_dir = github[0].cloned_directory
+        cloned_dir = github.cloned_directory
         # image_name = str('segullshairbutt/' + str(request.user) + str(os.path.basename(cloned_dir)))
         # here we are going to provide the path for pushing
         image_name = 'segullshairbutt/website'
@@ -81,7 +83,7 @@ def deploy_project(project_url, logged_in_user):
         # this path is already available
         default_docker_file_path = os.path.join(cloned_dir, "Dockerfile")
         docker = Docker(
-            github=github[0], docker_image=image_name, deployment_path=deployment_path,
+            github=github, docker_image=image_name, deployment_path=deployment_path,
             default_docker_filepath=default_docker_file_path)
         create_image(docker)
         # push_image(docker)
@@ -109,6 +111,7 @@ def deploy_project(project_url, logged_in_user):
         #     deploymentTag = len(prev_docker_obj) + 1
 
         endpoints = Endpoints.objects.all()
+        # will get a port that's is not occupied by any other endpoint
         if endpoints:
             port_low_range = endpoints[len(endpoints) - 1].ports + 1
             port_up_range = port_low_range + 5
@@ -116,7 +119,7 @@ def deploy_project(project_url, logged_in_user):
         for ports in range(port_low_range, port_up_range):
             services_ports.append(ports)
 
-        deploymentName = str(logged_in_user) + "-nodeapp-" + str(len(Docker.objects.all()) + 1)
+        deploymentName = str(dir_name) + "-nodeapp-" + str(len(Docker.objects.all()) + 1)
 
         kubernetes = Kubernetes(docker=docker,
                                 config_data_path=config_data_path, yaml_deployments=yaml_deployments_path,
@@ -132,22 +135,32 @@ def deploy_project(project_url, logged_in_user):
 
         # save ports to endpoints
         for port in services_ports:
-            endpoints = Endpoints(kubernetes=kubernetes, ports=port)
-            endpoints.save()
+            # endpoints = Endpoints(kubernetes=kubernetes, ports=port)
+            # endpoints.save()
+
+            name = choice(["POST", "DELETE", "PUT", "GET", "PATCH"])
+            path = Path(name=api_name)
+            path.save()
+
+            method = Method(path=path, name=name, extra_fields=json.dumps(METHOD_TEMPLATE))
+            method.save()
+
+            endpoint = Endpoint(kubernetes=kubernetes, port=port, path=path)
+            endpoint.save()
 
     except Exception as e:
         raise e
 
 
 def zip_dir():
-    logger.info("Zipping directory.")
+    LOGGER.info("Zipping directory.")
     zip_file = zipfile.ZipFile('Python.zip', 'w', zipfile.ZIP_DEFLATED)
 
     for root, dirs, files in os.walk("temp/"):
         for file in files:
             zip_file.write(os.path.join(root, file))
     zip_file.close()
-    logger.info("Zipping directory finished.")
+    LOGGER.info("Zipping directory finished.")
 
 
 class Filepaths:
@@ -164,7 +177,8 @@ def start_monitoring(github):
     docker = Docker.objects.get(github=github)
     kubernetes = Kubernetes.objects.get(docker=docker)
 
-    service_ports = kubernetes.endpoints_set.all()
+    # service_ports = kubernetes.endpoints_set.all()
+    end_points = kubernetes.endpoint_set.all()
 
     paths = Filepaths()
     paths.default_docker_filepath = docker.default_docker_filepath
@@ -174,5 +188,5 @@ def start_monitoring(github):
     paths.yaml_filepath = kubernetes.yaml_deployments
     paths.helm_deployment_path = kubernetes.helm_deployments
 
-    data_monitor(paths, service_ports)
+    data_monitor(paths, end_points)
     # main.run(docker, kubernetes, service_ports)
