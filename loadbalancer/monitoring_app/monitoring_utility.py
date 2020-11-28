@@ -84,10 +84,12 @@ def monitor_scaling(pods, config_path):
                                 # delete api_methods from existing template
                                 _delete_api_method(template, service["port"], path_name, api_method_name)
 
-            if template == previous_template:
+            if template == copy.deepcopy(get_config_file(os.path.join(config_path, file_name))):
+                logger.info("Same as previous template.")
                 continue
             else:
                 _clean_template(template)
+                logger.info("Return changed template.")
                 return template
     return None
 
