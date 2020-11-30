@@ -10,7 +10,7 @@ from random import choice
 from .constants import METHOD_TEMPLATE
 from .models import Github, Docker, Kubernetes, Endpoints, Endpoint, Method, Path
 from .utilities import clone_repo, create_image, push_image, create_chart, deploy_chart
-from monitoring_app.monitoring_service import data_monitor
+from monitoring_app.data_monitorer import data_monitor
 
 LOGGER = logging.getLogger("root")
 

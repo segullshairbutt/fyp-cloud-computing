@@ -7,13 +7,13 @@ import logging
 
 import yaml
 
-from .deployment_file_templates import (get_initial_service_content,
-                                        get_initial_deployment_content,
-                                        get_container_template,
-                                        get_docker_image, get_service_template,
-                                        get_values_file_content,
-                                        get_chart_file_content,
-                                        get_deployment_file_content, get_services_template)
+from monitoring_app.templates.deployment_file_templates import (get_initial_service_content,
+                                                                get_initial_deployment_content,
+                                                                get_container_template,
+                                                                get_docker_image, get_service_template,
+                                                                get_values_file_content,
+                                                                get_chart_file_content,
+                                                                get_deployment_file_content, get_services_template)
 
 VERBOSE_LOGGER = logging.getLogger("mid-verbose")
 LOGGER = logging.getLogger("root")

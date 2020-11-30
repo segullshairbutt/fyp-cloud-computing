@@ -56,3 +56,4 @@ class Endpoint(models.Model):
     kubernetes = models.ForeignKey(Kubernetes, on_delete=models.CASCADE)
     port = models.PositiveIntegerField(primary_key=True)
     path = models.OneToOneField(Path, on_delete=models.CASCADE, related_name="endpoint_path")
+
