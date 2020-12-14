@@ -4,7 +4,7 @@ METHOD_TEMPLATE = {
     ],
     "summary": "Add a new pet to the store",
     "description": "",
-    "operationId": "addPet",
+    # "operationId": "addPet",
     "requestBody": {
         "description": "description about addition to pet",
         "required": True,
@@ -43,7 +43,7 @@ GET_METHOD_TEMPLATE = {
     ],
     "summary": "Add a new pet to the store",
     "description": "",
-    "operationId": "addPet",
+    # "operationId": "addPet",
     "responses": {
         "405": {
             "description": "Invalid input"

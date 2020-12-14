@@ -1,5 +1,6 @@
 venv/
-/__pycache__
+__pycache__
 .idea/
 *.sqlite3
 admin
+openapi-generator-cli.jar

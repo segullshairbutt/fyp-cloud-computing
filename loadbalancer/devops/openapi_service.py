@@ -48,7 +48,12 @@ def create_endpoint_path(project_id, path_name, number_of_methods):
             method_template = GET_METHOD_TEMPLATE
         else:
             method_template = METHOD_TEMPLATE
-        method = Method(path=path, name=name, extra_fields=json.dumps(method_template))
+        method = Method(path=path, name=name, extra_fields=method_template)
         method.save()
 
+
+def start_monitoring(project_id):
+    project = Project.objects.get(id=project_id)
+
+    data_monitor(project)
 

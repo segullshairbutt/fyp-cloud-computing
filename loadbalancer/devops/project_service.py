@@ -142,7 +142,7 @@ def deploy_project(project_url, dir_name, api_name):
             path = Path(name=api_name)
             path.save()
 
-            method = Method(path=path, name=name, extra_fields=json.dumps(METHOD_TEMPLATE))
+            method = Method(path=path, name=name, extra_fields=METHOD_TEMPLATE)
             method.save()
 
             endpoint = Endpoint(kubernetes=kubernetes, port=port, path=path)

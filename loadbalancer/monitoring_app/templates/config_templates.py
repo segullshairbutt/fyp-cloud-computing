@@ -1,3 +1,6 @@
+import json
+
+
 def _get_initial_config(port):
     return {
         "openapi": "3.0.0",
@@ -246,13 +249,13 @@ def _get_initial_config(port):
     }
 
 
-def generate_configuration(endpoints):
+def generate_configuration(endpoint_paths):
     template = _get_initial_config(4000)
     paths = template["paths"]
-    for endpoint in endpoints:
-        path = paths.setdefault(endpoint.path.name, {})
+    for endpoint_path in endpoint_paths:
+        path = paths.setdefault(endpoint_path.name, {})
 
-        for method in endpoint.path.method_set.all():
+        for method in endpoint_path.method_set.all():
             extra_fields = method.extra_fields
             extra_fields["x-location"] = {
                 "$ref": "#/info/x-pods/pod1/containers/c1/port"

@@ -5,6 +5,7 @@ import os
 
 import monitoring_app.data_generator as data_generator
 import monitoring_app.templates.config_templates as config_templates
+import monitoring_app.utilities as utilities
 
 VERBOSE_LOGGER = logging.getLogger("mid-verbose")
 LOGGER = logging.getLogger("root")
@@ -101,16 +102,17 @@ def _generate_related_data(dir_path, config_file, data_file):
     data_generator.generate_data(dir_path, config_file, data_file, **kwargs)
 
 
-def data_monitor(paths, end_points):
+def data_monitor(project):
     VERBOSE_LOGGER.info("data-monitor started.")
 
-    config_dir_path = paths.config_data_path
+    config_dir_path = project.config_data_path
 
     # generating a new file if already doesn't exists
     if get_total_files_length(config_dir_path) == 0:
         # generated_template = generate_configuration_template(end_points)
-        generated_template = config_templates.generate_configuration(end_points)
+        generated_template = config_templates.generate_configuration(project.path_urls.all())
         LOGGER.info("Generating initial files")
+
         # generate the name for new configuration file
         configfile = str(get_new_filetag(config_dir_path)) + 'config.json'
         # generate the name for new data file
@@ -118,9 +120,13 @@ def data_monitor(paths, end_points):
         # populate new configuration file
         write_config_file(generated_template, config_dir_path, configfile)
         # populate new data file
-
         # config_and_metrics_generator.generate_data(config_dir_path, configfile, datafile)
         data_generator.generate_data(config_dir_path, configfile, datafile)
+
+        # waiting for 2 seconds so that the file is written succesfully.
+        # sleep(2)
+        # creating the server side code
+        utilities.create_server_stub(os.path.join(project.config_data_path, configfile), project.directory)
 
     for run in range(1):
         latest_filetag = str(get_latest_filetag(config_dir_path))
@@ -165,6 +171,11 @@ def data_monitor(paths, end_points):
 
             # creating the data.json file populate data according to new template
             data_generator.generate_data(config_dir_path, new_config_file, new_data_file)
+
+            # waiting for 2 seconds so that the file is written succesfully.
+            # sleep(2)
+            # creating the server side code
+            utilities.create_server_stub(os.path.join(project.config_data_path, new_config_file), project.directory)
 
             """create docker files according to how many containers we need in new config
             we are passing prev_files_tags here because at last 2 function that we call above
