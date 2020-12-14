@@ -1,3 +1,5 @@
+import os
+
 from jsonfield import JSONField
 from django.db import models
 from django.contrib.auth.models import User
@@ -41,8 +43,45 @@ class Endpoints(models.Model):
         return str(self.ports)
 
 
+# the actual model that has been used yet starts from here.
+class Project(models.Model):
+    name = models.CharField(max_length=100)
+    docker_image_name = models.CharField(max_length=200)
+    kubernetes_deployment_name = models.CharField(max_length=200)
+    directory = models.CharField(max_length=500)
+
+    @property
+    def config_data_path(self):
+        return os.path.join(self.directory, "config_data")
+
+    @property
+    def dockerfile_path(self):
+        return os.path.join(self.directory, "DOCKERFILE")
+
+    @property
+    def docker_deployment_path(self):
+        return os.path.join(self.directory, "docker_deployments")
+
+    @property
+    def yaml_deployment_path(self):
+        return os.path.join(self.directory, "yaml_deployments")
+
+    @property
+    def helm_chart_path(self):
+        return self.directory.join("helm_charts")
+
+    @property
+    def helm_chart_templates_path(self):
+        return os.path.join(self.directory, "helm_charts", "templates")
+
+    @property
+    def helm_deployment_path(self):
+        return os.path.join(self.directory, "helm_deployments")
+
+
 class Path(models.Model):
     name = models.CharField(max_length=50)
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name="path_urls", null=True)
 
 
 class Method(models.Model):
@@ -50,7 +89,7 @@ class Method(models.Model):
     extra_fields = JSONField()
 
     path = models.ForeignKey(Path, on_delete=models.CASCADE)
-
+# and ends here
 
 class Endpoint(models.Model):
     kubernetes = models.ForeignKey(Kubernetes, on_delete=models.CASCADE)

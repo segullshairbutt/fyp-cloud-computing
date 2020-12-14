@@ -1,26 +1,21 @@
 METHOD_TEMPLATE = {
+    "tags": [
+        "pet"
+    ],
     "summary": "Add a new pet to the store",
     "description": "",
-    "operation_id": "addPet",
-    "consumes": [
-        "application/json",
-        "application/xml"
-    ],
-    "produces": [
-        "application/xml",
-        "application/json"
-    ],
-    "parameters": [
-        {
-            "in": "body",
-            "name": "body",
-            "description": "Pet object that needs to be added to the store",
-            "required": "true",
-            "schema": {
-                "$ref": "#/definitions/Pet"
+    "operationId": "addPet",
+    "requestBody": {
+        "description": "description about addition to pet",
+        "required": True,
+        "content": {
+            "application/json": {
+                "schema": {
+                    "$ref": "#/components/schemas/Pet"
+                }
             }
         }
-    ],
+    },
     "responses": {
         "405": {
             "description": "Invalid input"
@@ -33,4 +28,39 @@ METHOD_TEMPLATE = {
                 "read:pets"
             ]
         }
-    ]}
+    ],
+    "x-location": {
+        "$ref": "#/info/x-pods/pod1/containers/c1/port"
+    },
+    "x-metrics": {
+        "load": ""
+    }
+}
+
+GET_METHOD_TEMPLATE = {
+    "tags": [
+        "pet"
+    ],
+    "summary": "Add a new pet to the store",
+    "description": "",
+    "operationId": "addPet",
+    "responses": {
+        "405": {
+            "description": "Invalid input"
+        }
+    },
+    "security": [
+        {
+            "petstore_auth": [
+                "write:pets",
+                "read:pets"
+            ]
+        }
+    ],
+    "x-location": {
+        "$ref": "#/info/x-pods/pod1/containers/c1/port"
+    },
+    "x-metrics": {
+        "load": ""
+    }
+}
