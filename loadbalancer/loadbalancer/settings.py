@@ -171,3 +171,5 @@ LOGGING = {
         }
     }
 }
+
+DOCKER_IMAGE_NAME = "segullshairbutt/website"
