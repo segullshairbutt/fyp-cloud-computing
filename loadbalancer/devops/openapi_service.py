@@ -1,4 +1,4 @@
-import json
+import subprocess
 import os
 import logging
 from random import choice
@@ -32,6 +32,17 @@ def create_project(project_name):
     os.mkdir(project.yaml_deployment_path)
     os.mkdir(project.helm_deployment_path)
     os.makedirs(project.helm_chart_templates_path)
+
+    with(open(os.path.join(project.helm_chart_path, "Chart.yaml"), "w")) as chart_file:
+        LOGGER.info("writing Chart.YAML file")
+        chart_file.write(f"""apiVersion: v2 #mandatory
+    name: open-api-chart #mandatory
+    description: A Helm chart for Kubernetes
+    type: application
+    version: 0.1.0 #mandatory
+    appVersion: 1.0""")
+    # installing the helm for first time
+    subprocess.call(["helm", "install", "open-api-app", project.helm_chart_path])
 
     LOGGER.info("project directories created..")
     return project.save()

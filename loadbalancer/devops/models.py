@@ -68,7 +68,7 @@ class Project(models.Model):
 
     @property
     def helm_chart_path(self):
-        return self.directory.join("helm_charts")
+        return os.path.join(self.directory, "helm_charts")
 
     @property
     def helm_chart_templates_path(self):

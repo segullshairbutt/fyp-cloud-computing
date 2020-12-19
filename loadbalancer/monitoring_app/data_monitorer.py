@@ -123,10 +123,12 @@ def data_monitor(project):
         # config_and_metrics_generator.generate_data(config_dir_path, configfile, datafile)
         data_generator.generate_data(config_dir_path, configfile, datafile)
 
-        # waiting for 2 seconds so that the file is written succesfully.
-        # sleep(2)
         # creating the server side code
-        utilities.create_server_stub(os.path.join(project.config_data_path, configfile), project.directory)
+        utilities.create_server_stub(
+            os.path.join(project.config_data_path, configfile),
+            project.directory,
+            helm_chart_path=project.helm_chart_path,
+            helm_chart_template_path=project.helm_chart_templates_path)
 
     for run in range(1):
         latest_filetag = str(get_latest_filetag(config_dir_path))
@@ -175,7 +177,12 @@ def data_monitor(project):
             # waiting for 2 seconds so that the file is written succesfully.
             # sleep(2)
             # creating the server side code
-            utilities.create_server_stub(os.path.join(project.config_data_path, new_config_file), project.directory)
+            utilities.create_server_stub(
+                os.path.join(project.config_data_path, new_config_file),
+                project.directory,
+                helm_chart_path=project.helm_chart_path,
+                helm_chart_template_path=project.helm_chart_templates_path
+            )
 
             """create docker files according to how many containers we need in new config
             we are passing prev_files_tags here because at last 2 function that we call above
@@ -219,7 +226,7 @@ MIN_RAM_USAGE = 40
 def _monitor_scaling(all_data, config_path):
     VERBOSE_LOGGER.info("Monitor the scaling of pods and containers.")
 
-    file_name = get_latest_filetag(config_path) + "config.json"
+    file_name = str(get_latest_filetag(config_path)) + "config.json"
     template = copy.deepcopy(get_config_file(os.path.join(config_path, file_name)))
     copied_template = copy.deepcopy(template)
 
