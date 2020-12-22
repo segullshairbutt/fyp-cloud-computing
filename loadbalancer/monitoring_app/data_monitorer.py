@@ -124,7 +124,7 @@ def data_monitor(project):
         data_generator.generate_data(config_dir_path, configfile, datafile)
 
         # creating the server side code
-        utilities.create_server_stub(
+        utilities.create_server_stubs(
             os.path.join(project.config_data_path, configfile),
             project.directory,
             helm_chart_path=project.helm_chart_path,
@@ -177,7 +177,7 @@ def data_monitor(project):
             # waiting for 2 seconds so that the file is written succesfully.
             # sleep(2)
             # creating the server side code
-            utilities.create_server_stub(
+            utilities.create_server_stubs(
                 os.path.join(project.config_data_path, new_config_file),
                 project.directory,
                 helm_chart_path=project.helm_chart_path,
