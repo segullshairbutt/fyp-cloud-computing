@@ -44,38 +44,6 @@
             "port": 4002
           }
         }
-      },
-      "pod3": {
-        "name": "pod3",
-        "metrics": {
-          "CPU": "",
-          "RAM": ""
-        },
-        "containers": {
-          "c1": {
-            "id": "c1",
-            "metrics": {
-              "load": ""
-            },
-            "port": 4003
-          }
-        }
-      },
-      "pod4": {
-        "name": "pod4",
-        "metrics": {
-          "CPU": "",
-          "RAM": ""
-        },
-        "containers": {
-          "c1": {
-            "id": "c1",
-            "metrics": {
-              "load": ""
-            },
-            "port": 4004
-          }
-        }
       }
     }
   },
@@ -140,7 +108,7 @@
           }
         ],
         "x-location": {
-          "$ref": "#/info/x-pods/pod4/containers/c1/port"
+          "$ref": "#/info/x-pods/pod1/containers/c1/port"
         },
         "x-metrics": {
           "load": ""
@@ -166,7 +134,7 @@
           }
         ],
         "x-location": {
-          "$ref": "#/info/x-pods/pod3/containers/c1/port"
+          "$ref": "#/info/x-pods/pod1/containers/c1/port"
         },
         "x-metrics": {
           "load": ""
@@ -231,7 +199,7 @@
           }
         ],
         "x-location": {
-          "$ref": "#/info/x-pods/pod1/containers/c1/port"
+          "$ref": "#/info/x-pods/pod2/containers/c1/port"
         },
         "x-metrics": {
           "load": ""
@@ -270,7 +238,7 @@
           }
         ],
         "x-location": {
-          "$ref": "#/info/x-pods/pod4/containers/c1/port"
+          "$ref": "#/info/x-pods/pod1/containers/c1/port"
         },
         "x-metrics": {
           "load": ""
@@ -307,7 +275,7 @@
           }
         ],
         "x-location": {
-          "$ref": "#/info/x-pods/pod2/containers/c1/port"
+          "$ref": "#/info/x-pods/pod1/containers/c1/port"
         },
         "x-metrics": {
           "load": ""
@@ -333,7 +301,7 @@
           }
         ],
         "x-location": {
-          "$ref": "#/info/x-pods/pod2/containers/c1/port"
+          "$ref": "#/info/x-pods/pod1/containers/c1/port"
         },
         "x-metrics": {
           "load": ""

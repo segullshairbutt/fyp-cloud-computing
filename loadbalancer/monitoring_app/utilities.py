@@ -4,8 +4,11 @@ import logging
 import os
 import shutil
 import subprocess
+from os.path import basename
+from zipfile import ZipFile
 
 from django.conf import settings
+
 
 VERBOSE_LOGGER = logging.getLogger("mid-verbose")
 LOGGER = logging.getLogger("root")
@@ -24,7 +27,16 @@ def create_server_stubs(source_config_file, project_directory, **kwargs):
         _create_server_stub(config_file, project_directory, count, **kwargs)
         count += 1
 
-    subprocess.call(["helm", "upgrade", "open-api-app", kwargs.get("helm_chart_path")])
+    config_name = str(source_config_file.split('/')[-1]).split('.')[0]
+
+    helm_deployment_path = kwargs.get("helm_deployment_path")
+    with ZipFile(os.path.join(helm_deployment_path, config_name), "w") as zip_obj:
+        helm_chart_path = kwargs.get("helm_chart_path")
+        for folder_name, sub_folder_name, file_names in os.walk(helm_chart_path):
+            for file_name in file_names:
+                file_path = os.path.join(folder_name, file_name)
+                zip_obj.write(file_path, basename(file_path))
+    # subprocess.call(["helm", "upgrade", "open-api-app", kwargs.get("helm_chart_path")])
 
 
 def _create_server_stub(config_file, project_directory, count, **kwargs):
@@ -54,56 +66,20 @@ ENTRYPOINT ["java","-jar","/app.jar"]""")
     subprocess.call(["docker", "build", "-t", docker_image_name, output_directory])
 
     # pushing the image to docker hub
-    subprocess.call(["docker", "push", docker_image_name])
+    # subprocess.call(["docker", "push", docker_image_name])
 
     version = str(int(config_name.split("config")[0].split("_")[1]))
 
+    helm_chart, helm_deployment = get_helm_chart(version, count, docker_image_name)
     with(open(os.path.join(kwargs.get("helm_chart_path"), "Chart.yaml"), "w")) as chart_file:
         LOGGER.info("writing Chart.YAML file")
-        chart_file.write(f"""apiVersion: v2 #mandatory
-name: open-api-chart #mandatory
-description: A Helm chart for Kubernetes
-type: application
-version: 0.1.0 #mandatory
-appVersion: 1.{version}.{str(count)}""")
+        chart_file.write(helm_chart)
 
     with(open(os.path.join(
             kwargs.get("helm_chart_template_path"), config_name.lower() + "deployment.yaml"
     ), "w")) as deployment_file:
         LOGGER.info("writing deployment.YAML file")
-        deployment_file.write(f"""---
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: open-api-app-v-{version}-{str(count)}
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: open-api-app-v-{version}-{str(count)}
-  template:
-    metadata:
-      labels:
-        app: open-api-app-v-{version}-{str(count)}
-    spec:
-      containers:
-        - name: app
-          image: {docker_image_name}
-          ports:
-            - containerPort: 8080          
-          imagePullPolicy: IfNotPresent
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: open-api-app-v-{version}-{str(count)}
-spec:
-  selector:
-    app: open-api-app-v-{version}-{str(count)}
-  ports:
-    - port: 8081
-      targetPort: 8080          
-  type: LoadBalancer""")
+        deployment_file.write(helm_deployment)
 
 
 def _get_templates(config_file, project_directory):
@@ -115,9 +91,7 @@ def _get_templates(config_file, project_directory):
         for path_name, path in template["paths"].items():
             for method_name, method in path.items():
                 ref_path = RefPath(method["x-location"]["$ref"])
-                full_method = dict()
-                full_method[method_name] = method
-                methods.append(Method(path_name, method_name, ref_path, full_method))
+                methods.append(Method(path_name, method_name, ref_path, method))
 
         pods = []
         for pod_name, pod in template["info"]["x-pods"].items():
@@ -132,7 +106,10 @@ def _get_templates(config_file, project_directory):
             pod_methods = {}
             for method in methods:
                 if method.ref_path.pod_name == pod.pod_name:
-                    pod_methods[method.path_name] = method.full_method
+                    pod_methods.setdefault(method.path_name, {})
+                    pod_methods[method.path_name][method.method_name] = method.full_method
+
+            # writing configs for each pod
             if len(pod_methods):
                 sample_template["info"]["x-pods"] = pod.full_pod
                 sample_template["paths"] = pod_methods
@@ -148,7 +125,7 @@ def _get_templates(config_file, project_directory):
                     json.dump(sample_template, new_file)
                     templates.append(file_path)
 
-                LOGGER.info(str(len(pod_methods)) + " endpoint methods appended to " + pod.pod_name)
+                LOGGER.info(str(len(pod_methods)) + " endpoint methods added to " + pod.pod_name)
 
             count += 1
         return templates
@@ -195,3 +172,48 @@ class RefPath:
     @property
     def full_path(self):
         return "#/info/x-pods/" + self.pod_name + "/containers/" + self.container_name + "/port"
+
+
+def get_helm_chart(version, count, image_name):
+    deployment_file = f"""---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: open-api-app-v-{version}-{str(count)}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: open-api-app-v-{version}-{str(count)}
+  template:
+    metadata:
+      labels:
+        app: open-api-app-v-{version}-{str(count)}
+    spec:
+      containers:
+        - name: app
+          image: {image_name}
+          ports:
+            - containerPort: 8080          
+          imagePullPolicy: IfNotPresent
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: open-api-app-v-{version}-{str(count)}
+spec:
+  selector:
+    app: open-api-app-v-{version}-{str(count)}
+  ports:
+    - port: 8081
+      targetPort: 8080          
+  type: LoadBalancer"""
+
+    chart_file = f"""apiVersion: v2 #mandatory
+name: open-api-chart #mandatory
+description: A Helm chart for Kubernetes
+type: application
+version: 0.1.0 #mandatory
+appVersion: 1.{version}.{str(count)}"""
+
+    return chart_file, deployment_file

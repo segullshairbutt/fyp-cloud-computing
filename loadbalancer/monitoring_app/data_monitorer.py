@@ -128,7 +128,9 @@ def data_monitor(project):
             os.path.join(project.config_data_path, configfile),
             project.directory,
             helm_chart_path=project.helm_chart_path,
-            helm_chart_template_path=project.helm_chart_templates_path)
+            helm_chart_template_path=project.helm_chart_templates_path,
+            helm_deployment_path=project.helm_deployment_path
+        )
 
     for run in range(1):
         latest_filetag = str(get_latest_filetag(config_dir_path))
@@ -181,7 +183,8 @@ def data_monitor(project):
                 os.path.join(project.config_data_path, new_config_file),
                 project.directory,
                 helm_chart_path=project.helm_chart_path,
-                helm_chart_template_path=project.helm_chart_templates_path
+                helm_chart_template_path=project.helm_chart_templates_path,
+                helm_deployment_path=project.helm_deployment_path
             )
 
             """create docker files according to how many containers we need in new config
