@@ -37,9 +37,9 @@ def generate_data(dir_path, config_file, data_file, **kwargs):
         if 10 < kwargs['container_load'] < 85:
             container_min_range = kwargs['container_load'] - 10
             container_max_range = kwargs['container_load'] + 10
-        if 10 < kwargs['service_load'] < 85:
-            service_min_range = kwargs['service_load'] - 10
-            service_max_range = kwargs['service_load'] + 10
+        if 10 < kwargs['method_load'] < 85:
+            service_min_range = kwargs['method_load'] - 10
+            service_max_range = kwargs['method_load'] + 10
 
     # getting the path of the latest config file
     path_config = os.path.join(dir_path, config_file)

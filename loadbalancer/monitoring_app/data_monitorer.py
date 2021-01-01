@@ -11,7 +11,7 @@ VERBOSE_LOGGER = logging.getLogger("mid-verbose")
 LOGGER = logging.getLogger("root")
 
 
-def get_config_file(filepath):
+def _get_config_file(filepath):
     VERBOSE_LOGGER.info("getting config file.")
     with open(filepath, 'r', encoding='utf-8') as f:
         data = f.read()
@@ -19,7 +19,7 @@ def get_config_file(filepath):
     return dataset
 
 
-def write_config_file(template, dir_path, filename):
+def _write_config_file(template, dir_path, filename):
     VERBOSE_LOGGER.info("generating config file.")
     print('filename is ', filename)
     path = os.path.join(dir_path, filename)
@@ -28,7 +28,7 @@ def write_config_file(template, dir_path, filename):
         json.dump(template, f, ensure_ascii=False, indent=2)
 
 
-def get_total_files_length(dir_path):
+def _get_total_files_length(dir_path):
     dir_size = (len(os.listdir(dir_path)))
     # as it contains config and data files
     total_files = int(dir_size / 2)
@@ -36,7 +36,7 @@ def get_total_files_length(dir_path):
     return total_files
 
 
-def get_new_filetag(dir_path):
+def _get_new_filetag(dir_path):
     """This method will return integer that is the number for new next file
      in that directory"""
 
@@ -48,7 +48,7 @@ def get_new_filetag(dir_path):
     return new_file_tag
 
 
-def get_latest_filetag(dir_path):
+def _get_latest_filetag(dir_path):
     """get the number of latest configuration file"""
 
     dir_size = (len(os.listdir(dir_path)))
@@ -58,7 +58,7 @@ def get_latest_filetag(dir_path):
     return file_tag
 
 
-def _generate_related_data(dir_path, config_file, data_file):
+def _generate_related_data(dir_path, config_file, data_file_name):
     """Get the latest min and max ranges for cpu
 
     Container and services need this method, because we have to generate new data for the same
@@ -68,38 +68,38 @@ def _generate_related_data(dir_path, config_file, data_file):
     """
     VERBOSE_LOGGER.info("getting latest data.")
 
-    with open(os.path.join(dir_path, data_file), 'r') as data:
-        content = json.loads(data.read())
-    content = content[len(content) - 1]
+    with open(os.path.join(dir_path, data_file_name), 'r') as data:
+        data_file_content = json.loads(data.read())
+    data_file_content = data_file_content[len(data_file_content) - 1]
 
-    first_key = next(iter(content))
-    pod = content[first_key]
+    all_pods = data_file_content["x-pods"]
+
+    first_pod_key = next(iter(all_pods))
+
+    pod = all_pods[first_pod_key]
     pod_cpu = pod['metrics']['CPU']
     pod_ram = pod['metrics']['RAM']
 
-    container = pod['containers']
-    container = container[len(container) - 1]
+    containers = pod['containers']
+    first_container_key = next(iter(containers))
+    container = containers[first_container_key]
     container_load = container['metrics']['load']
 
-    services = container['services']
-    service = services[len(services) - 1]
-    # getting the first element of service dict e-g 'paths':{}
-    api_path = service["paths"]
-    # getting path_name which is first_element e-g 'paths':{'pets':{}}
-    api_methods = api_path[next(iter(api_path))]
-    # getting first method e-g 'paths':{'pets':{'PUT'{}}}
-    method = api_methods[next(iter(api_methods))]
-    service_load = method["metrics"]["load"]
+    first_path_key = next(iter(data_file_content["paths"]))
+    first_method_key = next(iter(data_file_content["paths"][first_path_key]))
 
-    # service_load = api_methods['metrics'][0]['load']
+    method_load = data_file_content["paths"][first_path_key][first_method_key]["x-metrics"]["load"]
+
     kwargs = {
         "pod_cpu": pod_cpu,
         "pod_ram": pod_ram,
         "container_load": container_load,
-        "service_load": service_load
+        "method_load": method_load
     }
+
+    print("--------------------------DONE--------------------------")
     # config_and_metrics_generator.generate_data(dir_path, config_file, data_file, **kwargs)
-    data_generator.generate_data(dir_path, config_file, data_file, **kwargs)
+    data_generator.generate_data(dir_path, config_file, data_file_name, **kwargs)
 
 
 def data_monitor(project):
@@ -108,17 +108,17 @@ def data_monitor(project):
     config_dir_path = project.config_data_path
 
     # generating a new file if already doesn't exists
-    if get_total_files_length(config_dir_path) == 0:
+    if _get_total_files_length(config_dir_path) == 0:
         # generated_template = generate_configuration_template(end_points)
         generated_template = config_templates.generate_configuration(project.path_urls.all())
         LOGGER.info("Generating initial files")
 
         # generate the name for new configuration file
-        configfile = str(get_new_filetag(config_dir_path)) + 'config.json'
+        configfile = str(_get_new_filetag(config_dir_path)) + 'config.json'
         # generate the name for new data file
-        datafile = str(get_new_filetag(config_dir_path)) + 'data.json'
+        datafile = str(_get_new_filetag(config_dir_path)) + 'data.json'
         # populate new configuration file
-        write_config_file(generated_template, config_dir_path, configfile)
+        _write_config_file(generated_template, config_dir_path, configfile)
         # populate new data file
         # config_and_metrics_generator.generate_data(config_dir_path, configfile, datafile)
         data_generator.generate_data(config_dir_path, configfile, datafile)
@@ -133,7 +133,7 @@ def data_monitor(project):
         )
 
     for run in range(1):
-        latest_filetag = str(get_latest_filetag(config_dir_path))
+        latest_filetag = str(_get_latest_filetag(config_dir_path))
         data_read_file = latest_filetag + 'data.json'
         data_read_path = os.path.join(config_dir_path, data_read_file)
         with open(data_read_path) as f:
@@ -149,8 +149,8 @@ def data_monitor(project):
         if not new_template:
             # no need to update the template just overwrite the new data to latest data.json file
             # add more objects to the latest data.json file
-            data_file = str(get_latest_filetag(config_dir_path)) + 'data.json'
-            config_file = str(get_latest_filetag(config_dir_path)) + 'config.json'
+            data_file = str(_get_latest_filetag(config_dir_path)) + 'data.json'
+            config_file = str(_get_latest_filetag(config_dir_path)) + 'config.json'
             _generate_related_data(config_dir_path, config_file, data_file)
 
             LOGGER.info("no changing in template no need to update the config file")
@@ -165,19 +165,17 @@ def data_monitor(project):
             # generate stuff for new files
 
             # creating name for new configuration file
-            new_config_file = str(get_new_filetag(config_dir_path)) + 'config.json'
+            new_config_file = str(_get_new_filetag(config_dir_path)) + 'config.json'
 
             # creating name for new data file
-            new_data_file = str(get_new_filetag(config_dir_path)) + 'data.json'
+            new_data_file = str(_get_new_filetag(config_dir_path)) + 'data.json'
 
             # creating config.json file with new template
-            write_config_file(new_template, config_dir_path, new_config_file)
+            _write_config_file(new_template, config_dir_path, new_config_file)
 
             # creating the data.json file populate data according to new template
             data_generator.generate_data(config_dir_path, new_config_file, new_data_file)
 
-            # waiting for 2 seconds so that the file is written succesfully.
-            # sleep(2)
             # creating the server side code
             utilities.create_server_stubs(
                 os.path.join(project.config_data_path, new_config_file),
@@ -229,8 +227,8 @@ MIN_RAM_USAGE = 40
 def _monitor_scaling(all_data, config_path):
     VERBOSE_LOGGER.info("Monitor the scaling of pods and containers.")
 
-    file_name = str(get_latest_filetag(config_path)) + "config.json"
-    template = copy.deepcopy(get_config_file(os.path.join(config_path, file_name)))
+    file_name = str(_get_latest_filetag(config_path)) + "config.json"
+    template = copy.deepcopy(_get_config_file(os.path.join(config_path, file_name)))
     copied_template = copy.deepcopy(template)
 
     for single_data_obj in all_data:

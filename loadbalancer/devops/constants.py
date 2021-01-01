@@ -43,6 +43,17 @@ GET_METHOD_TEMPLATE = {
     ],
     "summary": "Add a new pet to the store",
     "description": "",
+    "requestBody": {
+        "description": "description about addition to pet",
+        "required": True,
+        "content": {
+            "application/json": {
+                "schema": {
+                    "$ref": "#/components/schemas/Pet"
+                }
+            }
+        }
+    },
     # "operationId": "addPet",
     "responses": {
         "405": {
