@@ -5,7 +5,6 @@ import os
 
 import monitoring_app.data_generator as data_generator
 import monitoring_app.templates.config_templates as config_templates
-import monitoring_app.utilities as utilities
 
 VERBOSE_LOGGER = logging.getLogger("mid-verbose")
 LOGGER = logging.getLogger("root")
@@ -124,13 +123,13 @@ def data_monitor(project):
         data_generator.generate_data(config_dir_path, configfile, datafile)
 
         # creating the server side code
-        utilities.create_server_stubs(
-            os.path.join(project.config_data_path, configfile),
-            project.directory,
-            helm_chart_path=project.helm_chart_path,
-            helm_chart_template_path=project.helm_chart_templates_path,
-            helm_deployment_path=project.helm_deployment_path
-        )
+        # utilities.create_server_stubs(
+        #     os.path.join(project.config_data_path, configfile),
+        #     project.directory,
+        #     helm_chart_path=project.helm_chart_path,
+        #     helm_chart_template_path=project.helm_chart_templates_path,
+        #     helm_deployment_path=project.helm_deployment_path
+        # )
 
     for run in range(1):
         latest_filetag = str(_get_latest_filetag(config_dir_path))
@@ -177,13 +176,13 @@ def data_monitor(project):
             data_generator.generate_data(config_dir_path, new_config_file, new_data_file)
 
             # creating the server side code
-            utilities.create_server_stubs(
-                os.path.join(project.config_data_path, new_config_file),
-                project.directory,
-                helm_chart_path=project.helm_chart_path,
-                helm_chart_template_path=project.helm_chart_templates_path,
-                helm_deployment_path=project.helm_deployment_path
-            )
+            # utilities.create_server_stubs(
+            #     os.path.join(project.config_data_path, new_config_file),
+            #     project.directory,
+            #     helm_chart_path=project.helm_chart_path,
+            #     helm_chart_template_path=project.helm_chart_templates_path,
+            #     helm_deployment_path=project.helm_deployment_path
+            # )
 
             """create docker files according to how many containers we need in new config
             we are passing prev_files_tags here because at last 2 function that we call above
@@ -205,11 +204,12 @@ class RefPath:
 
 
 class Method:
-    def __init__(self, path_name, method_name, ref_path, load):
+    def __init__(self, path_name, method_name, ref_path, load, full_method):
         self.path_name = path_name
         self.method_name = method_name
         self.ref_path = ref_path
         self.load = load
+        self.full_method = full_method
 
     def __str__(self):
         return self.path_name + ": " + self.method_name + ", " + str(self.load) + " (" + self.ref_path.full_path + ")"
@@ -241,7 +241,7 @@ def _monitor_scaling(all_data, config_path):
         for path_name, path in data_paths.items():
             for method_name, method in path.items():
                 ref_path = RefPath(method["x-location"]["$ref"])
-                methods.append(Method(path_name, method_name, ref_path, method["x-metrics"]["load"]))
+                methods.append(Method(path_name, method_name, ref_path, method["x-metrics"]["load"], method))
 
         for method in methods:
             if MIN_ENDPOINT_LOAD < method.load <= MAX_ENDPOINT_LOAD:
@@ -251,7 +251,7 @@ def _monitor_scaling(all_data, config_path):
             elif method.load > MAX_ENDPOINT_LOAD:
                 print("Needed to scale up {" + method.__str__() + "}")
 
-                #         checking that the pod have more than one method already deployed.
+                # checking that the pod have more than one method already deployed.
                 number_of_methods_on_pod = _get_number_of_methods_on_path(methods, method.ref_path)
                 print("Number of methods on " + method.ref_path.pod_name + ": ", str(number_of_methods_on_pod))
 
@@ -269,12 +269,19 @@ def _monitor_scaling(all_data, config_path):
                     pod_name = pod_template["name"]
                     method.ref_path.pod_name = pod_name
                     copied_template["info"]["x-pods"][pod_name] = pod_template
-                    copied_template["paths"][method.path_name][method.method_name]["x-location"][
-                        "$ref"] = method.ref_path.full_path
+                    # copied_template["paths"][method.path_name][method.method_name]["x-location"][
+                    #     "$ref"] = method.ref_path.full_path
 
-                    #             considering the latest number of pods
+                    schema_name = _get_schema_only(list(set(_gen_dict_extract('$ref', method.full_method))))
+                    schema_grouped_methods = _get_schema_grouped_methods(methods)
+                    if schema_grouped_methods[schema_name]:
+                        generate_template_by_methods(schema_grouped_methods[schema_name], copied_template, pod_name)
+                    else:
+                        generate_template_by_methods([method], copied_template, pod_name)
+
+                    # considering the latest number of pods
                     number_of_pods = new_pod_number
-                    #             decreasing the number of methods on current pod
+                    # decreasing the number of methods on current pod
                     number_of_methods_on_pod -= 1
 
             elif method.load <= MIN_ENDPOINT_LOAD:
@@ -298,6 +305,53 @@ def _monitor_scaling(all_data, config_path):
 
     #     if no new template is made None type is returned back
     return None
+
+
+def generate_template_by_methods(methods, prev_template, pod_name):
+    VERBOSE_LOGGER.info("re-writing the config template by using methods..")
+    for method in methods:
+        method.ref_path.pod_name = pod_name
+        prev_template["paths"][method.path_name][method.method_name]["x-location"][
+            "$ref"] = method.ref_path.full_path
+        LOGGER.info(f"writing {method.ref_path.full_path} on {pod_name}")
+    LOGGER.info(f"wrote {str(len(methods))} of method on {pod_name}")
+
+
+def _gen_dict_extract(key, var):
+    if hasattr(var, 'items'):
+        for k, v in var.items():
+            if k == key:
+                yield v
+            if isinstance(v, dict):
+                for result in _gen_dict_extract(key, v):
+                    yield result
+            elif isinstance(v, (list)):
+                for d in v:
+                    for result in _gen_dict_extract(key, d):
+                        yield result
+
+
+def _get_schema_only(references):
+    for reference in references:
+        schema = reference.split("#/components/schemas/")
+        try:
+            return schema[1]
+        except IndexError:
+            pass
+    return 'default'
+
+
+def _get_schema_grouped_methods(methods):
+    schema_methods = {}
+    for method in methods:
+        all_references = list(set(_gen_dict_extract('$ref', method.full_method)))
+
+        schema_name = _get_schema_only(all_references)
+
+        schema_methods.setdefault(schema_name, [])
+        schema_methods[schema_name].append(method)
+
+    return schema_methods
 
 
 def _get_number_of_methods_on_path(methods, ref_path):
@@ -331,16 +385,16 @@ def _get_path_to_merge(methods, new_load, current_full_ref_path):
     loads = {}
     counters = {}
     for method in methods:
-        #         adding the load of all methods with same reference path
+        # adding the load of all methods with same reference path
         load = loads.setdefault(method.ref_path.full_path, new_load)
         load += method.load
 
-        #         counting the number of methods on specific reference path
+        # counting the number of methods on specific reference path
         counter = counters.setdefault(method.ref_path.full_path, 0)
         counter += 1
 
     for full_ref_path, load in loads.items():
-        #         we don't want to merge it in current pod.
+        # we don't want to merge it in current pod.
         if full_ref_path == current_full_ref_path:
             continue
 
@@ -353,10 +407,10 @@ def _get_path_to_merge(methods, new_load, current_full_ref_path):
             print(full_ref_path)
             pass
 
-        #         if the loads of any ref_path is less than max endpoint load after addition it will be returned
+        # if the loads of any ref_path is less than max endpoint load after addition it will be returned
         if average < MAX_ENDPOINT_LOAD:
             return full_ref_path
-    #     if no path is capable to take this load None type will be returned
+    # if no path is capable to take this load None type will be returned
     return None
 
 
