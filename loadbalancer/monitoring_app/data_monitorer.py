@@ -274,15 +274,27 @@ def _monitor_scaling(all_data, config_path):
 
                     schema_name = _get_schema_only(list(set(_gen_dict_extract('$ref', method.full_method))))
                     schema_grouped_methods = _get_schema_grouped_methods(methods)
-                    if schema_grouped_methods[schema_name]:
+
+                    # if sum of grouped methods is under threshold methods are grouped together
+                    sum_of_schema_group_methods_load = sum(m.load for m in schema_grouped_methods[schema_name])
+                    sum_of_schema_group_methods_load += method.load
+                    average_of_all_methods = sum_of_schema_group_methods_load / (len(schema_grouped_methods[schema_name]) + 1)
+
+                    LOGGER.info("AVERAGE OF GROUPED METHODS LOAD IS: " + str(average_of_all_methods))
+                    if schema_grouped_methods[schema_name] and average_of_all_methods < MAX_ENDPOINT_LOAD:
+                        LOGGER.info("methods are grouped in a pod.")
                         generate_template_by_methods(schema_grouped_methods[schema_name], copied_template, pod_name)
+                        no_of_methods = len(schema_grouped_methods[schema_name])
                     else:
+                        # otherwise a new pod for new method is created..
+                        LOGGER.info("creating a new pod for single method.")
                         generate_template_by_methods([method], copied_template, pod_name)
+                        no_of_methods = 1
 
                     # considering the latest number of pods
                     number_of_pods = new_pod_number
                     # decreasing the number of methods on current pod
-                    number_of_methods_on_pod -= 1
+                    number_of_methods_on_pod -= no_of_methods
 
             elif method.load <= MIN_ENDPOINT_LOAD:
                 print("Needed to scale down {" + method.__str__() + "}")
@@ -313,7 +325,7 @@ def generate_template_by_methods(methods, prev_template, pod_name):
         method.ref_path.pod_name = pod_name
         prev_template["paths"][method.path_name][method.method_name]["x-location"][
             "$ref"] = method.ref_path.full_path
-        LOGGER.info(f"writing {method.ref_path.full_path} on {pod_name}")
+        LOGGER.info(f"writing {method.path_name}/{method.method_name} on {pod_name}")
     LOGGER.info(f"wrote {str(len(methods))} of method on {pod_name}")
 
 
