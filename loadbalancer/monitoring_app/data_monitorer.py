@@ -5,6 +5,7 @@ import os
 
 import monitoring_app.data_generator as data_generator
 import monitoring_app.templates.config_templates as config_templates
+import monitoring_app.utilities as utilities
 
 VERBOSE_LOGGER = logging.getLogger("mid-verbose")
 LOGGER = logging.getLogger("root")
@@ -123,13 +124,13 @@ def data_monitor(project):
         data_generator.generate_data(config_dir_path, configfile, datafile)
 
         # creating the server side code
-        # utilities.create_server_stubs(
-        #     os.path.join(project.config_data_path, configfile),
-        #     project.directory,
-        #     helm_chart_path=project.helm_chart_path,
-        #     helm_chart_template_path=project.helm_chart_templates_path,
-        #     helm_deployment_path=project.helm_deployment_path
-        # )
+        utilities.create_server_stubs(
+            os.path.join(project.config_data_path, configfile),
+            project.directory,
+            helm_chart_path=project.helm_chart_path,
+            helm_chart_template_path=project.helm_chart_templates_path,
+            helm_deployment_path=project.helm_deployment_path
+        )
 
     for run in range(1):
         latest_filetag = str(_get_latest_filetag(config_dir_path))
@@ -337,7 +338,7 @@ def _gen_dict_extract(key, var):
             if isinstance(v, dict):
                 for result in _gen_dict_extract(key, v):
                     yield result
-            elif isinstance(v, (list)):
+            elif isinstance(v, list):
                 for d in v:
                     for result in _gen_dict_extract(key, d):
                         yield result

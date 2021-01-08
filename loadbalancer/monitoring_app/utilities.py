@@ -36,7 +36,7 @@ def create_server_stubs(source_config_file, project_directory, **kwargs):
             for file_name in file_names:
                 file_path = os.path.join(folder_name, file_name)
                 zip_obj.write(file_path, basename(file_path))
-    # subprocess.call(["helm", "upgrade", "open-api-app", kwargs.get("helm_chart_path")])
+    subprocess.call(["helm", "upgrade", "open-api-app", kwargs.get("helm_chart_path")])
 
 
 def _create_server_stub(config_file, project_directory, count, **kwargs):
@@ -66,7 +66,7 @@ ENTRYPOINT ["java","-jar","/app.jar"]""")
     subprocess.call(["docker", "build", "-t", docker_image_name, output_directory])
 
     # pushing the image to docker hub
-    # subprocess.call(["docker", "push", docker_image_name])
+    subprocess.call(["docker", "push", docker_image_name])
 
     version = str(int(config_name.split("config")[0].split("_")[1]))
 

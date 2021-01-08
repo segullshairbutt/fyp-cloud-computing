@@ -1,7 +1,7 @@
 import json
 
 
-def _get_initial_config(port):
+def _get_initial_config():
     return {
         "openapi": "3.0.0",
         "info": {
@@ -28,8 +28,7 @@ def _get_initial_config(port):
                             "id": "c1",
                             "metrics": {
                                 "load": ""
-                            },
-                            "port": port
+                            }
                         }
                     }
                 }
@@ -250,7 +249,7 @@ def _get_initial_config(port):
 
 
 def generate_configuration(endpoint_paths):
-    template = _get_initial_config(4000)
+    template = _get_initial_config()
     paths = template["paths"]
     for endpoint_path in endpoint_paths:
         path = paths.setdefault(endpoint_path.name, {})
