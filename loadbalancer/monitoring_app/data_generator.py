@@ -53,7 +53,7 @@ def generate_data(dir_path, config_file, data_file, **kwargs):
     # set the default load value that can use only for first object in any dataset
 
     # iterate loop 10 times to generate 10 objects of dataset
-    for load in range(1):
+    for load in range(3):
         config = copy.deepcopy(dataset)
 
         pods = config["info"]["x-pods"]

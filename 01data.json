@@ -1,0 +1,893 @@
+[
+  {
+    "x-pods": {
+      "pod1": {
+        "name": "pod1",
+        "metrics": {
+          "CPU": 84,
+          "RAM": 61
+        },
+        "containers": {
+          "c1": {
+            "id": "c1",
+            "metrics": {
+              "load": 37
+            }
+          },
+          "c2": {
+            "id": "c2",
+            "metrics": {
+              "load": 44
+            }
+          },
+          "c3": {
+            "id": "c3",
+            "metrics": {
+              "load": 34
+            }
+          },
+          "c4": {
+            "id": "c4",
+            "metrics": {
+              "load": 79
+            }
+          }
+        }
+      }
+    },
+    "paths": {
+      "/pets": {
+        "get": {
+          "tags": [
+            "pet"
+          ],
+          "summary": "Add a new pet to the store",
+          "description": "",
+          "responses": {
+            "405": {
+              "description": "Invalid input"
+            }
+          },
+          "security": [
+            {
+              "petstore_auth": [
+                "write:pets",
+                "read:pets"
+              ]
+            }
+          ],
+          "x-location": {
+            "$ref": "#/info/x-pods/pod1/containers/c1/port"
+          },
+          "x-metrics": {
+            "load": 82
+          }
+        },
+        "post": {
+          "tags": [
+            "pet"
+          ],
+          "summary": "Add a new pet to the store",
+          "description": "",
+          "responses": {
+            "405": {
+              "description": "Invalid input"
+            }
+          },
+          "security": [
+            {
+              "petstore_auth": [
+                "write:pets",
+                "read:pets"
+              ]
+            }
+          ],
+          "x-location": {
+            "$ref": "#/info/x-pods/pod1/containers/c1/port"
+          },
+          "x-metrics": {
+            "load": 74
+          }
+        },
+        "put": {
+          "tags": [
+            "pet"
+          ],
+          "summary": "Add a new pet to the store",
+          "description": "",
+          "requestBody": {
+            "description": "description about addition to pet",
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Pet"
+                }
+              }
+            }
+          },
+          "responses": {
+            "405": {
+              "description": "Invalid input"
+            }
+          },
+          "security": [
+            {
+              "petstore_auth": [
+                "write:pets",
+                "read:pets"
+              ]
+            }
+          ],
+          "x-location": {
+            "$ref": "#/info/x-pods/pod1/containers/c2/port"
+          },
+          "x-metrics": {
+            "load": 31
+          }
+        }
+      },
+      "/users": {
+        "get": {
+          "tags": [
+            "pet"
+          ],
+          "summary": "Add a new pet to the store",
+          "description": "",
+          "responses": {
+            "405": {
+              "description": "Invalid input"
+            }
+          },
+          "security": [
+            {
+              "petstore_auth": [
+                "write:pets",
+                "read:pets"
+              ]
+            }
+          ],
+          "x-location": {
+            "$ref": "#/info/x-pods/pod1/containers/c1/port"
+          },
+          "x-metrics": {
+            "load": 86
+          }
+        },
+        "patch": {
+          "tags": [
+            "pet"
+          ],
+          "summary": "Add a new pet to the store",
+          "description": "",
+          "requestBody": {
+            "description": "description about addition to pet",
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "responses": {
+            "405": {
+              "description": "Invalid input"
+            }
+          },
+          "security": [
+            {
+              "petstore_auth": [
+                "write:pets",
+                "read:pets"
+              ]
+            }
+          ],
+          "x-location": {
+            "$ref": "#/info/x-pods/pod1/containers/c3/port"
+          },
+          "x-metrics": {
+            "load": 12
+          }
+        }
+      },
+      "/store": {
+        "patch": {
+          "tags": [
+            "pet"
+          ],
+          "summary": "Add a new pet to the store",
+          "description": "",
+          "requestBody": {
+            "description": "description about addition to pet",
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Pet"
+                }
+              }
+            }
+          },
+          "responses": {
+            "405": {
+              "description": "Invalid input"
+            }
+          },
+          "security": [
+            {
+              "petstore_auth": [
+                "write:pets",
+                "read:pets"
+              ]
+            }
+          ],
+          "x-location": {
+            "$ref": "#/info/x-pods/pod1/containers/c2/port"
+          },
+          "x-metrics": {
+            "load": 87
+          }
+        },
+        "get": {
+          "tags": [
+            "pet"
+          ],
+          "summary": "Add a new pet to the store",
+          "description": "",
+          "responses": {
+            "405": {
+              "description": "Invalid input"
+            }
+          },
+          "security": [
+            {
+              "petstore_auth": [
+                "write:pets",
+                "read:pets"
+              ]
+            }
+          ],
+          "x-location": {
+            "$ref": "#/info/x-pods/pod1/containers/c1/port"
+          },
+          "x-metrics": {
+            "load": 93
+          }
+        },
+        "post": {
+          "tags": [
+            "pet"
+          ],
+          "summary": "Add a new pet to the store",
+          "description": "",
+          "requestBody": {
+            "description": "description about addition to pet",
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Store"
+                }
+              }
+            }
+          },
+          "responses": {
+            "405": {
+              "description": "Invalid input"
+            }
+          },
+          "security": [
+            {
+              "petstore_auth": [
+                "write:pets",
+                "read:pets"
+              ]
+            }
+          ],
+          "x-location": {
+            "$ref": "#/info/x-pods/pod1/containers/c4/port"
+          },
+          "x-metrics": {
+            "load": 83
+          }
+        }
+      }
+    }
+  },
+  {
+    "x-pods": {
+      "pod1": {
+        "name": "pod1",
+        "metrics": {
+          "CPU": 89,
+          "RAM": 52
+        },
+        "containers": {
+          "c1": {
+            "id": "c1",
+            "metrics": {
+              "load": 87
+            }
+          },
+          "c2": {
+            "id": "c2",
+            "metrics": {
+              "load": 77
+            }
+          },
+          "c3": {
+            "id": "c3",
+            "metrics": {
+              "load": 85
+            }
+          },
+          "c4": {
+            "id": "c4",
+            "metrics": {
+              "load": 84
+            }
+          }
+        }
+      }
+    },
+    "paths": {
+      "/pets": {
+        "get": {
+          "tags": [
+            "pet"
+          ],
+          "summary": "Add a new pet to the store",
+          "description": "",
+          "responses": {
+            "405": {
+              "description": "Invalid input"
+            }
+          },
+          "security": [
+            {
+              "petstore_auth": [
+                "write:pets",
+                "read:pets"
+              ]
+            }
+          ],
+          "x-location": {
+            "$ref": "#/info/x-pods/pod1/containers/c1/port"
+          },
+          "x-metrics": {
+            "load": 90
+          }
+        },
+        "post": {
+          "tags": [
+            "pet"
+          ],
+          "summary": "Add a new pet to the store",
+          "description": "",
+          "responses": {
+            "405": {
+              "description": "Invalid input"
+            }
+          },
+          "security": [
+            {
+              "petstore_auth": [
+                "write:pets",
+                "read:pets"
+              ]
+            }
+          ],
+          "x-location": {
+            "$ref": "#/info/x-pods/pod1/containers/c1/port"
+          },
+          "x-metrics": {
+            "load": 78
+          }
+        },
+        "put": {
+          "tags": [
+            "pet"
+          ],
+          "summary": "Add a new pet to the store",
+          "description": "",
+          "requestBody": {
+            "description": "description about addition to pet",
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Pet"
+                }
+              }
+            }
+          },
+          "responses": {
+            "405": {
+              "description": "Invalid input"
+            }
+          },
+          "security": [
+            {
+              "petstore_auth": [
+                "write:pets",
+                "read:pets"
+              ]
+            }
+          ],
+          "x-location": {
+            "$ref": "#/info/x-pods/pod1/containers/c2/port"
+          },
+          "x-metrics": {
+            "load": 77
+          }
+        }
+      },
+      "/users": {
+        "get": {
+          "tags": [
+            "pet"
+          ],
+          "summary": "Add a new pet to the store",
+          "description": "",
+          "responses": {
+            "405": {
+              "description": "Invalid input"
+            }
+          },
+          "security": [
+            {
+              "petstore_auth": [
+                "write:pets",
+                "read:pets"
+              ]
+            }
+          ],
+          "x-location": {
+            "$ref": "#/info/x-pods/pod1/containers/c1/port"
+          },
+          "x-metrics": {
+            "load": 78
+          }
+        },
+        "patch": {
+          "tags": [
+            "pet"
+          ],
+          "summary": "Add a new pet to the store",
+          "description": "",
+          "requestBody": {
+            "description": "description about addition to pet",
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "responses": {
+            "405": {
+              "description": "Invalid input"
+            }
+          },
+          "security": [
+            {
+              "petstore_auth": [
+                "write:pets",
+                "read:pets"
+              ]
+            }
+          ],
+          "x-location": {
+            "$ref": "#/info/x-pods/pod1/containers/c3/port"
+          },
+          "x-metrics": {
+            "load": 74
+          }
+        }
+      },
+      "/store": {
+        "patch": {
+          "tags": [
+            "pet"
+          ],
+          "summary": "Add a new pet to the store",
+          "description": "",
+          "requestBody": {
+            "description": "description about addition to pet",
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Pet"
+                }
+              }
+            }
+          },
+          "responses": {
+            "405": {
+              "description": "Invalid input"
+            }
+          },
+          "security": [
+            {
+              "petstore_auth": [
+                "write:pets",
+                "read:pets"
+              ]
+            }
+          ],
+          "x-location": {
+            "$ref": "#/info/x-pods/pod1/containers/c2/port"
+          },
+          "x-metrics": {
+            "load": 76
+          }
+        },
+        "get": {
+          "tags": [
+            "pet"
+          ],
+          "summary": "Add a new pet to the store",
+          "description": "",
+          "responses": {
+            "405": {
+              "description": "Invalid input"
+            }
+          },
+          "security": [
+            {
+              "petstore_auth": [
+                "write:pets",
+                "read:pets"
+              ]
+            }
+          ],
+          "x-location": {
+            "$ref": "#/info/x-pods/pod1/containers/c1/port"
+          },
+          "x-metrics": {
+            "load": 82
+          }
+        },
+        "post": {
+          "tags": [
+            "pet"
+          ],
+          "summary": "Add a new pet to the store",
+          "description": "",
+          "requestBody": {
+            "description": "description about addition to pet",
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Store"
+                }
+              }
+            }
+          },
+          "responses": {
+            "405": {
+              "description": "Invalid input"
+            }
+          },
+          "security": [
+            {
+              "petstore_auth": [
+                "write:pets",
+                "read:pets"
+              ]
+            }
+          ],
+          "x-location": {
+            "$ref": "#/info/x-pods/pod1/containers/c4/port"
+          },
+          "x-metrics": {
+            "load": 89
+          }
+        }
+      }
+    }
+  },
+  {
+    "x-pods": {
+      "pod1": {
+        "name": "pod1",
+        "metrics": {
+          "CPU": 92,
+          "RAM": 61
+        },
+        "containers": {
+          "c1": {
+            "id": "c1",
+            "metrics": {
+              "load": 88
+            }
+          },
+          "c2": {
+            "id": "c2",
+            "metrics": {
+              "load": 90
+            }
+          },
+          "c3": {
+            "id": "c3",
+            "metrics": {
+              "load": 84
+            }
+          },
+          "c4": {
+            "id": "c4",
+            "metrics": {
+              "load": 76
+            }
+          }
+        }
+      }
+    },
+    "paths": {
+      "/pets": {
+        "get": {
+          "tags": [
+            "pet"
+          ],
+          "summary": "Add a new pet to the store",
+          "description": "",
+          "responses": {
+            "405": {
+              "description": "Invalid input"
+            }
+          },
+          "security": [
+            {
+              "petstore_auth": [
+                "write:pets",
+                "read:pets"
+              ]
+            }
+          ],
+          "x-location": {
+            "$ref": "#/info/x-pods/pod1/containers/c1/port"
+          },
+          "x-metrics": {
+            "load": 90
+          }
+        },
+        "post": {
+          "tags": [
+            "pet"
+          ],
+          "summary": "Add a new pet to the store",
+          "description": "",
+          "responses": {
+            "405": {
+              "description": "Invalid input"
+            }
+          },
+          "security": [
+            {
+              "petstore_auth": [
+                "write:pets",
+                "read:pets"
+              ]
+            }
+          ],
+          "x-location": {
+            "$ref": "#/info/x-pods/pod1/containers/c1/port"
+          },
+          "x-metrics": {
+            "load": 87
+          }
+        },
+        "put": {
+          "tags": [
+            "pet"
+          ],
+          "summary": "Add a new pet to the store",
+          "description": "",
+          "requestBody": {
+            "description": "description about addition to pet",
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Pet"
+                }
+              }
+            }
+          },
+          "responses": {
+            "405": {
+              "description": "Invalid input"
+            }
+          },
+          "security": [
+            {
+              "petstore_auth": [
+                "write:pets",
+                "read:pets"
+              ]
+            }
+          ],
+          "x-location": {
+            "$ref": "#/info/x-pods/pod1/containers/c2/port"
+          },
+          "x-metrics": {
+            "load": 74
+          }
+        }
+      },
+      "/users": {
+        "get": {
+          "tags": [
+            "pet"
+          ],
+          "summary": "Add a new pet to the store",
+          "description": "",
+          "responses": {
+            "405": {
+              "description": "Invalid input"
+            }
+          },
+          "security": [
+            {
+              "petstore_auth": [
+                "write:pets",
+                "read:pets"
+              ]
+            }
+          ],
+          "x-location": {
+            "$ref": "#/info/x-pods/pod1/containers/c1/port"
+          },
+          "x-metrics": {
+            "load": 80
+          }
+        },
+        "patch": {
+          "tags": [
+            "pet"
+          ],
+          "summary": "Add a new pet to the store",
+          "description": "",
+          "requestBody": {
+            "description": "description about addition to pet",
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "responses": {
+            "405": {
+              "description": "Invalid input"
+            }
+          },
+          "security": [
+            {
+              "petstore_auth": [
+                "write:pets",
+                "read:pets"
+              ]
+            }
+          ],
+          "x-location": {
+            "$ref": "#/info/x-pods/pod1/containers/c3/port"
+          },
+          "x-metrics": {
+            "load": 73
+          }
+        }
+      },
+      "/store": {
+        "patch": {
+          "tags": [
+            "pet"
+          ],
+          "summary": "Add a new pet to the store",
+          "description": "",
+          "requestBody": {
+            "description": "description about addition to pet",
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Pet"
+                }
+              }
+            }
+          },
+          "responses": {
+            "405": {
+              "description": "Invalid input"
+            }
+          },
+          "security": [
+            {
+              "petstore_auth": [
+                "write:pets",
+                "read:pets"
+              ]
+            }
+          ],
+          "x-location": {
+            "$ref": "#/info/x-pods/pod1/containers/c2/port"
+          },
+          "x-metrics": {
+            "load": 87
+          }
+        },
+        "get": {
+          "tags": [
+            "pet"
+          ],
+          "summary": "Add a new pet to the store",
+          "description": "",
+          "responses": {
+            "405": {
+              "description": "Invalid input"
+            }
+          },
+          "security": [
+            {
+              "petstore_auth": [
+                "write:pets",
+                "read:pets"
+              ]
+            }
+          ],
+          "x-location": {
+            "$ref": "#/info/x-pods/pod1/containers/c1/port"
+          },
+          "x-metrics": {
+            "load": 88
+          }
+        },
+        "post": {
+          "tags": [
+            "pet"
+          ],
+          "summary": "Add a new pet to the store",
+          "description": "",
+          "requestBody": {
+            "description": "description about addition to pet",
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Store"
+                }
+              }
+            }
+          },
+          "responses": {
+            "405": {
+              "description": "Invalid input"
+            }
+          },
+          "security": [
+            {
+              "petstore_auth": [
+                "write:pets",
+                "read:pets"
+              ]
+            }
+          ],
+          "x-location": {
+            "$ref": "#/info/x-pods/pod1/containers/c4/port"
+          },
+          "x-metrics": {
+            "load": 82
+          }
+        }
+      }
+    }
+  }
+]

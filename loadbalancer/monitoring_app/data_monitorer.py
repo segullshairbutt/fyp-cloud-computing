@@ -110,27 +110,63 @@ def data_monitor(project):
     # generating a new file if already doesn't exists
     if _get_total_files_length(config_dir_path) == 0:
         # generated_template = generate_configuration_template(end_points)
-        generated_template = config_templates.generate_configuration(project.path_urls.all())
+        initial_template = config_templates.generate_configuration(project.path_urls.all())
         LOGGER.info("Generating initial files")
+
+        # getting all methods from a fat container
+        methods = []
+        for path_name, path in initial_template["paths"].items():
+            for method_name, method in path.items():
+                ref_path = RefPath(method["x-location"]["$ref"])
+
+                all_references = list(set(_gen_dict_extract('$ref', method)))
+                schema_name = _get_schema_only(all_references)
+
+                methods.append(Method(path_name, method_name, ref_path, '', schema_name, method))
+
+        schema_grouped_methods = {}
+        for method in methods:
+            schema_grouped_methods.setdefault(method.schema_name, [])
+            schema_grouped_methods[method.schema_name].append(method)
+
+        index = 1
+        copied_template = copy.deepcopy(initial_template)
+        for schema_name, schema_methods in schema_grouped_methods.items():
+            if index == 1:
+                pass
+            else:
+                first_method = schema_methods[0]
+                new_container = "c" + str(index)
+
+                container_template = {'id': new_container, 'metrics': {'load': ''}}
+
+                copied_template["info"]["x-pods"][first_method.ref_path.pod_name]["containers"][
+                    new_container] = container_template
+
+                for method in schema_methods:
+                    method.ref_path.container_name = new_container
+                    method.full_method["x-location"]["$ref"] = method.ref_path.full_path
+                    copied_template["paths"][method.path_name][method.method_name] = method.full_method
+            index += 1
 
         # generate the name for new configuration file
         configfile = str(_get_new_filetag(config_dir_path)) + 'config.json'
         # generate the name for new data file
         datafile = str(_get_new_filetag(config_dir_path)) + 'data.json'
         # populate new configuration file
-        _write_config_file(generated_template, config_dir_path, configfile)
+        _write_config_file(copied_template, config_dir_path, configfile)
         # populate new data file
         # config_and_metrics_generator.generate_data(config_dir_path, configfile, datafile)
         data_generator.generate_data(config_dir_path, configfile, datafile)
 
         # creating the server side code
-        utilities.create_server_stubs(
-            os.path.join(project.config_data_path, configfile),
-            project.directory,
-            helm_chart_path=project.helm_chart_path,
-            helm_chart_template_path=project.helm_chart_templates_path,
-            helm_deployment_path=project.helm_deployment_path
-        )
+        # utilities.create_server_stubs(
+        #     os.path.join(project.config_data_path, configfile),
+        #     project.directory,
+        #     helm_chart_path=project.helm_chart_path,
+        #     helm_chart_template_path=project.helm_chart_templates_path,
+        #     helm_deployment_path=project.helm_deployment_path
+        # )
 
     for run in range(1):
         latest_filetag = str(_get_latest_filetag(config_dir_path))
@@ -205,15 +241,17 @@ class RefPath:
 
 
 class Method:
-    def __init__(self, path_name, method_name, ref_path, load, full_method):
+    def __init__(self, path_name, method_name, ref_path, load, schema_name, full_method):
         self.path_name = path_name
         self.method_name = method_name
         self.ref_path = ref_path
         self.load = load
+        self.schema_name = schema_name
         self.full_method = full_method
 
     def __str__(self):
-        return self.path_name + ": " + self.method_name + ", " + str(self.load) + " (" + self.ref_path.full_path + ")"
+        return self.path_name + ": " + self.method_name + \
+               " (" + self.ref_path.full_path + ")" + " <-> " + self.schema_name
 
 
 MAX_ENDPOINT_LOAD = 60
@@ -242,7 +280,11 @@ def _monitor_scaling(all_data, config_path):
         for path_name, path in data_paths.items():
             for method_name, method in path.items():
                 ref_path = RefPath(method["x-location"]["$ref"])
-                methods.append(Method(path_name, method_name, ref_path, method["x-metrics"]["load"], method))
+
+                all_references = list(set(_gen_dict_extract('$ref', method)))
+                schema_name = _get_schema_only(all_references)
+
+                methods.append(Method(path_name, method_name, ref_path, method["x-metrics"]["load"], schema_name, method))
 
         for method in methods:
             if MIN_ENDPOINT_LOAD < method.load <= MAX_ENDPOINT_LOAD:
@@ -345,13 +387,15 @@ def _gen_dict_extract(key, var):
 
 
 def _get_schema_only(references):
+    saved_schema = 'default'
     for reference in references:
         schema = reference.split("#/components/schemas/")
         try:
-            return schema[1]
+            saved_schema = schema[1]
         except IndexError:
             pass
-    return 'default'
+
+    return saved_schema
 
 
 def _get_schema_grouped_methods(methods):
