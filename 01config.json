@@ -12,20 +12,52 @@
       "name": "Apache 2.0",
       "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
     },
-    "x-pods": {
-      "pod1": {
-        "name": "pod1",
+    "x-clusters": {
+      "cl1": {
+        "name": "cl1",
         "metrics": {
-          "CPU": "",
-          "RAM": ""
+          "load": ""
         },
-        "containers": {
-          "c1": {
-            "id": "c1",
+        "worker-nodes": {
+          "wn1": {
             "metrics": {
               "load": ""
             },
-            "port": 4000
+            "name": "wn1",
+            "pods": {
+              "pod1": {
+                "name": "pod1",
+                "metrics": {
+                  "load": ""
+                },
+                "containers": {
+                  "c1": {
+                    "id": "c1",
+                    "metrics": {
+                      "load": ""
+                    }
+                  },
+                  "c2": {
+                    "id": "c2",
+                    "metrics": {
+                      "load": ""
+                    }
+                  },
+                  "c3": {
+                    "id": "c3",
+                    "metrics": {
+                      "load": ""
+                    }
+                  },
+                  "c4": {
+                    "id": "c4",
+                    "metrics": {
+                      "load": ""
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -60,34 +92,8 @@
     }
   ],
   "paths": {
-    "/Pets": {
-      "get": {
-        "tags": [
-          "pet"
-        ],
-        "summary": "Add a new pet to the store",
-        "description": "",
-        "responses": {
-          "405": {
-            "description": "Invalid input"
-          }
-        },
-        "security": [
-          {
-            "petstore_auth": [
-              "write:pets",
-              "read:pets"
-            ]
-          }
-        ],
-        "x-location": {
-          "$ref": "#/info/x-pods/pod1/containers/c1/port"
-        },
-        "x-metrics": {
-          "load": ""
-        }
-      },
-      "put": {
+    "/pets": {
+      "post": {
         "tags": [
           "pet"
         ],
@@ -118,14 +124,12 @@
           }
         ],
         "x-location": {
-          "$ref": "#/info/x-pods/pod1/containers/c1/port"
+          "$ref": "#/info/x-clusters/cl1/worker-nodes/wn1/pods/pod1/containers/c1"
         },
         "x-metrics": {
           "load": ""
         }
-      }
-    },
-    "/Users": {
+      },
       "get": {
         "tags": [
           "pet"
@@ -146,12 +150,14 @@
           }
         ],
         "x-location": {
-          "$ref": "#/info/x-pods/pod1/containers/c1/port"
+          "$ref": "#/info/x-clusters/cl1/worker-nodes/wn1/pods/pod1/containers/c2"
         },
         "x-metrics": {
           "load": ""
         }
-      },
+      }
+    },
+    "/users": {
       "patch": {
         "tags": [
           "pet"
@@ -183,15 +189,13 @@
           }
         ],
         "x-location": {
-          "$ref": "#/info/x-pods/pod1/containers/c1/port"
+          "$ref": "#/info/x-clusters/cl1/worker-nodes/wn1/pods/pod1/containers/c3"
         },
         "x-metrics": {
           "load": ""
         }
-      }
-    },
-    "/Store": {
-      "patch": {
+      },
+      "delete": {
         "tags": [
           "pet"
         ],
@@ -203,7 +207,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Store"
+                "$ref": "#/components/schemas/User"
               }
             }
           }
@@ -222,7 +226,7 @@
           }
         ],
         "x-location": {
-          "$ref": "#/info/x-pods/pod1/containers/c1/port"
+          "$ref": "#/info/x-clusters/cl1/worker-nodes/wn1/pods/pod1/containers/c3"
         },
         "x-metrics": {
           "load": ""
@@ -248,7 +252,72 @@
           }
         ],
         "x-location": {
-          "$ref": "#/info/x-pods/pod1/containers/c1/port"
+          "$ref": "#/info/x-clusters/cl1/worker-nodes/wn1/pods/pod1/containers/c2"
+        },
+        "x-metrics": {
+          "load": ""
+        }
+      }
+    },
+    "/orders": {
+      "get": {
+        "tags": [
+          "pet"
+        ],
+        "summary": "Add a new pet to the store",
+        "description": "",
+        "responses": {
+          "405": {
+            "description": "Invalid input"
+          }
+        },
+        "security": [
+          {
+            "petstore_auth": [
+              "write:pets",
+              "read:pets"
+            ]
+          }
+        ],
+        "x-location": {
+          "$ref": "#/info/x-clusters/cl1/worker-nodes/wn1/pods/pod1/containers/c2"
+        },
+        "x-metrics": {
+          "load": ""
+        }
+      },
+      "patch": {
+        "tags": [
+          "pet"
+        ],
+        "summary": "Add a new pet to the store",
+        "description": "",
+        "requestBody": {
+          "description": "description about addition to pet",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Order"
+              }
+            }
+          }
+        },
+        "responses": {
+          "405": {
+            "description": "Invalid input"
+          }
+        },
+        "security": [
+          {
+            "petstore_auth": [
+              "write:pets",
+              "read:pets"
+            ]
+          }
+        ],
+        "x-location": {
+          "$ref": "#/info/x-clusters/cl1/worker-nodes/wn1/pods/pod1/containers/c4"
         },
         "x-metrics": {
           "load": ""
@@ -279,6 +348,7 @@
     },
     "schemas": {
       "Order": {
+        "x-storage-level": "pod",
         "type": "object",
         "properties": {
           "id": {
@@ -316,6 +386,7 @@
         }
       },
       "Category": {
+        "x-storage-level": "pod",
         "type": "object",
         "properties": {
           "id": {
@@ -331,6 +402,7 @@
         }
       },
       "User": {
+        "x-storage-level": "pod",
         "type": "object",
         "properties": {
           "id": {
@@ -366,6 +438,7 @@
         }
       },
       "Tag": {
+        "x-storage-level": "pod",
         "type": "object",
         "properties": {
           "id": {
@@ -381,6 +454,7 @@
         }
       },
       "Pet": {
+        "x-storage-level": "pod",
         "type": "object",
         "required": [
           "name",

@@ -70,36 +70,36 @@ def _generate_related_data(dir_path, config_file, data_file_name):
 
     with open(os.path.join(dir_path, data_file_name), 'r') as data:
         data_file_content = json.loads(data.read())
-    data_file_content = data_file_content[len(data_file_content) - 1]
+        data_file_content = data_file_content[len(data_file_content) - 1]
 
-    all_pods = data_file_content["x-pods"]
+        cluster = data_file_content["x-clusters"][next(iter(data_file_content["x-clusters"]))]
+        cl_load = cluster["metrics"]["load"]
 
-    first_pod_key = next(iter(all_pods))
+        worker_node = cluster['worker-nodes'][next(iter(cluster['worker-nodes']))]
+        wn_load = worker_node['metrics']['load']
 
-    pod = all_pods[first_pod_key]
-    pod_cpu = pod['metrics']['CPU']
-    pod_ram = pod['metrics']['RAM']
+        pod = worker_node['pods'][next(iter(worker_node['pods']))]
+        pod_load = pod['metrics']['load']
 
-    containers = pod['containers']
-    first_container_key = next(iter(containers))
-    container = containers[first_container_key]
-    container_load = container['metrics']['load']
+        container = pod['containers'][next(iter(pod['containers']))]
+        container_load = container['metrics']['load']
 
-    first_path_key = next(iter(data_file_content["paths"]))
-    first_method_key = next(iter(data_file_content["paths"][first_path_key]))
+        first_path_key = next(iter(data_file_content["paths"]))
+        first_method_key = next(iter(data_file_content["paths"][first_path_key]))
 
-    method_load = data_file_content["paths"][first_path_key][first_method_key]["x-metrics"]["load"]
+        method_load = data_file_content["paths"][first_path_key][first_method_key]["x-metrics"]["load"]
 
-    kwargs = {
-        "pod_cpu": pod_cpu,
-        "pod_ram": pod_ram,
-        "container_load": container_load,
-        "method_load": method_load
-    }
+        kwargs = {
+            "cl_load": cl_load,
+            "wn_load": wn_load,
+            "pod_load": pod_load,
+            "container_load": container_load,
+            "method_load": method_load
+        }
 
-    print("--------------------------DONE--------------------------")
-    # config_and_metrics_generator.generate_data(dir_path, config_file, data_file, **kwargs)
-    data_generator.generate_data(dir_path, config_file, data_file_name, **kwargs)
+        print("--------------------------DONE--------------------------")
+        # config_and_metrics_generator.generate_data(dir_path, config_file, data_file, **kwargs)
+        data_generator.generate_data(dir_path, config_file, data_file_name, **kwargs)
 
 
 def data_monitor(project):
@@ -110,27 +110,63 @@ def data_monitor(project):
     # generating a new file if already doesn't exists
     if _get_total_files_length(config_dir_path) == 0:
         # generated_template = generate_configuration_template(end_points)
-        generated_template = config_templates.generate_configuration(project.path_urls.all())
+        initial_template = config_templates.generate_configuration(project.path_urls.all())
         LOGGER.info("Generating initial files")
+
+        # getting all methods from a fat container
+        methods = []
+        for path_name, path in initial_template["paths"].items():
+            for method_name, method in path.items():
+                ref_path = RefPath(method["x-location"]["$ref"])
+
+                all_references = list(set(_gen_dict_extract('$ref', method)))
+                schema_name = _get_schema_only(all_references)
+
+                methods.append(Method(path_name, method_name, ref_path, '', schema_name, method))
+
+        schema_grouped_methods = {}
+        for method in methods:
+            schema_grouped_methods.setdefault(method.schema_name, [])
+            schema_grouped_methods[method.schema_name].append(method)
+
+        index = 1
+        copied_template = copy.deepcopy(initial_template)
+        for schema_name, schema_methods in schema_grouped_methods.items():
+            if index == 1:
+                pass
+            else:
+                first_method = schema_methods[0]
+                new_container = "c" + str(index)
+
+                container_template = {'id': new_container, 'metrics': {'load': ''}}
+                ref_path = first_method.ref_path
+                copied_template["info"]["x-clusters"][ref_path.cluster]["worker-nodes"][ref_path.worker_node]["pods"][
+                    ref_path.pod_name]["containers"][new_container] = container_template
+
+                for method in schema_methods:
+                    method.ref_path.container_name = new_container
+                    method.full_method["x-location"]["$ref"] = method.ref_path.full_path
+                    copied_template["paths"][method.path_name][method.method_name] = method.full_method
+            index += 1
 
         # generate the name for new configuration file
         configfile = str(_get_new_filetag(config_dir_path)) + 'config.json'
         # generate the name for new data file
         datafile = str(_get_new_filetag(config_dir_path)) + 'data.json'
         # populate new configuration file
-        _write_config_file(generated_template, config_dir_path, configfile)
+        _write_config_file(copied_template, config_dir_path, configfile)
         # populate new data file
         # config_and_metrics_generator.generate_data(config_dir_path, configfile, datafile)
         data_generator.generate_data(config_dir_path, configfile, datafile)
 
         # creating the server side code
-        utilities.create_server_stubs(
-            os.path.join(project.config_data_path, configfile),
-            project.directory,
-            helm_chart_path=project.helm_chart_path,
-            helm_chart_template_path=project.helm_chart_templates_path,
-            helm_deployment_path=project.helm_deployment_path
-        )
+        # utilities.create_server_stubs(
+        #     os.path.join(project.config_data_path, configfile),
+        #     project.directory,
+        #     helm_chart_path=project.helm_chart_path,
+        #     helm_chart_template_path=project.helm_chart_templates_path,
+        #     helm_deployment_path=project.helm_deployment_path
+        # )
 
     for run in range(1):
         latest_filetag = str(_get_latest_filetag(config_dir_path))
@@ -194,26 +230,30 @@ def data_monitor(project):
 
 class RefPath:
     def __init__(self, ref_path):
-        paths = ref_path.split("#/info/x-pods/")
+        paths = ref_path.split("#/info/x-clusters/")
         parts = paths[1].split("/")
-        self.pod_name = parts[0]
-        self.container_name = parts[2]
+        self.cluster = parts[0]
+        self.worker_node = parts[2]
+        self.pod_name = parts[4]
+        self.container_name = parts[6]
 
     @property
     def full_path(self):
-        return "#/info/x-pods/" + self.pod_name + "/containers/" + self.container_name
+        return f"#/info/x-clusters/{self.cluster}/worker-nodes/{self.worker_node}/pods/{self.pod_name}/containers/{self.container_name}"
 
 
 class Method:
-    def __init__(self, path_name, method_name, ref_path, load, full_method):
+    def __init__(self, path_name, method_name, ref_path, load, schema_name, full_method):
         self.path_name = path_name
         self.method_name = method_name
         self.ref_path = ref_path
         self.load = load
+        self.schema_name = schema_name
         self.full_method = full_method
 
     def __str__(self):
-        return self.path_name + ": " + self.method_name + ", " + str(self.load) + " (" + self.ref_path.full_path + ")"
+        return self.path_name + ": " + self.method_name + \
+               " (" + self.ref_path.full_path + ")" + " <-> " + self.schema_name
 
 
 MAX_ENDPOINT_LOAD = 60
@@ -242,7 +282,12 @@ def _monitor_scaling(all_data, config_path):
         for path_name, path in data_paths.items():
             for method_name, method in path.items():
                 ref_path = RefPath(method["x-location"]["$ref"])
-                methods.append(Method(path_name, method_name, ref_path, method["x-metrics"]["load"], method))
+
+                all_references = list(set(_gen_dict_extract('$ref', method)))
+                schema_name = _get_schema_only(all_references)
+
+                methods.append(
+                    Method(path_name, method_name, ref_path, method["x-metrics"]["load"], schema_name, method))
 
         for method in methods:
             if MIN_ENDPOINT_LOAD < method.load <= MAX_ENDPOINT_LOAD:
@@ -259,12 +304,6 @@ def _monitor_scaling(all_data, config_path):
                 if number_of_methods_on_pod > 1:
                     new_pod_number = number_of_pods + 1
                     # needed some mechanism to get the port right now i am just adding the pod number to existing port
-
-                    ref_path = method.ref_path
-                    # new_port = data_pods[ref_path.pod_name]["containers"][ref_path.container_name][
-                    #                "port"] + new_pod_number
-                    # print("new port : ", str(new_port))
-
                     pod_template = _get_pod_template(new_pod_number)
 
                     pod_name = pod_template["name"]
@@ -279,17 +318,18 @@ def _monitor_scaling(all_data, config_path):
                     # if sum of grouped methods is under threshold methods are grouped together
                     sum_of_schema_group_methods_load = sum(m.load for m in schema_grouped_methods[schema_name])
                     sum_of_schema_group_methods_load += method.load
-                    average_of_all_methods = sum_of_schema_group_methods_load / (len(schema_grouped_methods[schema_name]) + 1)
+                    average_of_all_methods = sum_of_schema_group_methods_load / (
+                                len(schema_grouped_methods[schema_name]) + 1)
 
                     LOGGER.info("AVERAGE OF GROUPED METHODS LOAD IS: " + str(average_of_all_methods))
                     if schema_grouped_methods[schema_name] and average_of_all_methods < MAX_ENDPOINT_LOAD:
                         LOGGER.info("methods are grouped in a pod.")
-                        generate_template_by_methods(schema_grouped_methods[schema_name], copied_template, pod_name)
+                        _generate_template_by_methods(schema_grouped_methods[schema_name], copied_template, pod_name)
                         no_of_methods = len(schema_grouped_methods[schema_name])
                     else:
                         # otherwise a new pod for new method is created..
                         LOGGER.info("creating a new pod for single method.")
-                        generate_template_by_methods([method], copied_template, pod_name)
+                        _generate_template_by_methods([method], copied_template, pod_name)
                         no_of_methods = 1
 
                     # considering the latest number of pods
@@ -320,7 +360,7 @@ def _monitor_scaling(all_data, config_path):
     return None
 
 
-def generate_template_by_methods(methods, prev_template, pod_name):
+def _generate_template_by_methods(methods, prev_template, pod_name):
     VERBOSE_LOGGER.info("re-writing the config template by using methods..")
     for method in methods:
         method.ref_path.pod_name = pod_name
@@ -345,13 +385,15 @@ def _gen_dict_extract(key, var):
 
 
 def _get_schema_only(references):
+    saved_schema = 'default'
     for reference in references:
         schema = reference.split("#/components/schemas/")
         try:
-            return schema[1]
+            saved_schema = schema[1]
         except IndexError:
             pass
-    return 'default'
+
+    return saved_schema
 
 
 def _get_schema_grouped_methods(methods):

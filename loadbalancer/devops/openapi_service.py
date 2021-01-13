@@ -3,7 +3,7 @@ import os
 import logging
 from random import choice
 
-from devops.constants import METHOD_TEMPLATE, GET_METHOD_TEMPLATE
+from devops import constants
 from devops.models import Project, Path, Method
 from monitoring_app.data_monitorer import data_monitor
 
@@ -48,7 +48,7 @@ def create_project(project_name):
     return project.save()
 
 
-def create_endpoint_path(project_id, path_name, number_of_methods):
+def create_endpoint_path(project_id, path_name, number_of_methods, schema_name):
     complete_path_name = '/' + path_name if path_name[0] != '/' else path_name
     path = Path(name=complete_path_name)
     path.project_id = project_id
@@ -56,9 +56,9 @@ def create_endpoint_path(project_id, path_name, number_of_methods):
     for a in range(number_of_methods):
         name = choice(["post", "delete", "put", "get", "patch"])
         if name == "get":
-            method_template = GET_METHOD_TEMPLATE
+            method_template = constants.GET_METHOD_TEMPLATE
         else:
-            method_template = METHOD_TEMPLATE
+            method_template = constants.generate_method(schema_name)
         method = Method(path=path, name=name, extra_fields=method_template)
         method.save()
 

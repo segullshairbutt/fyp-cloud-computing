@@ -1,6 +1,3 @@
-import json
-
-
 def _get_initial_config():
     return {
         "openapi": "3.0.0",
@@ -16,18 +13,33 @@ def _get_initial_config():
                 "name": "Apache 2.0",
                 "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
             },
-            "x-pods": {
-                "pod1": {
-                    "name": "pod1",
+            "x-clusters": {
+                "cl1": {
+                    "name": "cl1",
                     "metrics": {
-                        "CPU": "",
-                        "RAM": ""
+                        "load": ""
                     },
-                    "containers": {
-                        "c1": {
-                            "id": "c1",
+                    "worker-nodes": {
+                        "wn1": {
                             "metrics": {
                                 "load": ""
+                            },
+                            "name": "wn1",
+                            "pods": {
+                                "pod1": {
+                                    "name": "pod1",
+                                    "metrics": {
+                                        "load": ""
+                                    },
+                                    "containers": {
+                                        "c1": {
+                                            "id": "c1",
+                                            "metrics": {
+                                                "load": ""
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
@@ -86,6 +98,7 @@ def _get_initial_config():
             },
             "schemas": {
                 "Order": {
+                    "x-storage-level": "pod",
                     "type": "object",
                     "properties": {
                         "id": {
@@ -123,6 +136,7 @@ def _get_initial_config():
                     }
                 },
                 "Category": {
+                    "x-storage-level": "pod",
                     "type": "object",
                     "properties": {
                         "id": {
@@ -138,6 +152,7 @@ def _get_initial_config():
                     }
                 },
                 "User": {
+                    "x-storage-level": "pod",
                     "type": "object",
                     "properties": {
                         "id": {
@@ -173,6 +188,7 @@ def _get_initial_config():
                     }
                 },
                 "Tag": {
+                    "x-storage-level": "pod",
                     "type": "object",
                     "properties": {
                         "id": {
@@ -188,6 +204,7 @@ def _get_initial_config():
                     }
                 },
                 "Pet": {
+                    "x-storage-level": "pod",
                     "type": "object",
                     "required": [
                         "name",
@@ -256,9 +273,6 @@ def generate_configuration(endpoint_paths):
 
         for method in endpoint_path.method_set.all():
             extra_fields = method.extra_fields
-            extra_fields["x-location"] = {
-                "$ref": "#/info/x-pods/pod1/containers/c1/port1"
-            }
             extra_fields["x-metrics"] = {
                 "load": ""
             }
