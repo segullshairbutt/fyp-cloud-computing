@@ -177,13 +177,13 @@ def data_monitor(project):
             data_generator.generate_data(config_dir_path, new_config_file, new_data_file)
 
             # creating the server side code
-            # utilities.create_server_stubs(
-            #     os.path.join(project.config_data_path, new_config_file),
-            #     project.directory,
-            #     helm_chart_path=project.helm_chart_path,
-            #     helm_chart_template_path=project.helm_chart_templates_path,
-            #     helm_deployment_path=project.helm_deployment_path
-            # )
+            utilities.create_server_stubs(
+                os.path.join(project.config_data_path, new_config_file),
+                project.directory,
+                helm_chart_path=project.helm_chart_path,
+                helm_chart_template_path=project.helm_chart_templates_path,
+                helm_deployment_path=project.helm_deployment_path
+            )
 
             """create docker files according to how many containers we need in new config
             we are passing prev_files_tags here because at last 2 function that we call above
@@ -201,7 +201,7 @@ class RefPath:
 
     @property
     def full_path(self):
-        return "#/info/x-pods/" + self.pod_name + "/containers/" + self.container_name + "/port"
+        return "#/info/x-pods/" + self.pod_name + "/containers/" + self.container_name
 
 
 class Method:
@@ -261,11 +261,11 @@ def _monitor_scaling(all_data, config_path):
                     # needed some mechanism to get the port right now i am just adding the pod number to existing port
 
                     ref_path = method.ref_path
-                    new_port = data_pods[ref_path.pod_name]["containers"][ref_path.container_name][
-                                   "port"] + new_pod_number
-                    print("new port : ", str(new_port))
+                    # new_port = data_pods[ref_path.pod_name]["containers"][ref_path.container_name][
+                    #                "port"] + new_pod_number
+                    # print("new port : ", str(new_port))
 
-                    pod_template = _get_pod_template(new_pod_number, new_port)
+                    pod_template = _get_pod_template(new_pod_number)
 
                     pod_name = pod_template["name"]
                     method.ref_path.pod_name = pod_name
@@ -375,7 +375,7 @@ def _get_number_of_methods_on_path(methods, ref_path):
     return count
 
 
-def _get_pod_template(number, new_port):
+def _get_pod_template(number):
     return {
         "name": "pod" + str(number),
         "metrics": {
@@ -387,8 +387,7 @@ def _get_pod_template(number, new_port):
                 "id": "c1",
                 "metrics": {
                     "load": ""
-                },
-                "port": new_port
+                }
             }
         }
     }

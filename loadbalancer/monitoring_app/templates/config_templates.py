@@ -257,7 +257,7 @@ def generate_configuration(endpoint_paths):
         for method in endpoint_path.method_set.all():
             extra_fields = method.extra_fields
             extra_fields["x-location"] = {
-                "$ref": "#/info/x-pods/pod1/containers/c1/port"
+                "$ref": "#/info/x-pods/pod1/containers/c1/port1"
             }
             extra_fields["x-metrics"] = {
                 "load": ""
