@@ -147,7 +147,7 @@
             }
           ],
           "x-location": {
-            "$ref": "#/info/x-clusters/cl1/worker-nodes/wn1/pods/pod1/containers/c1"
+            "$ref": "#/info/x-clusters/cl1/worker-nodes/wn1/pods/pod3/containers/c1"
           },
           "x-metrics": {
             "load": 92
@@ -173,7 +173,7 @@
             }
           ],
           "x-location": {
-            "$ref": "#/info/x-clusters/cl1/worker-nodes/wn1/pods/pod1/containers/c2"
+            "$ref": "#/info/x-clusters/cl1/worker-nodes/wn1/pods/pod3/containers/c2"
           },
           "x-metrics": {
             "load": 78
@@ -212,7 +212,7 @@
             }
           ],
           "x-location": {
-            "$ref": "#/info/x-clusters/cl1/worker-nodes/wn1/pods/pod1/containers/c3"
+            "$ref": "#/info/x-clusters/cl1/worker-nodes/wn1/pods/3/containers/c3"
           },
           "x-metrics": {
             "load": 89
