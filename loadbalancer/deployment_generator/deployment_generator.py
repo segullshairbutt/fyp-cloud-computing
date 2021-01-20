@@ -7,13 +7,13 @@ import logging
 
 import yaml
 
-from monitoring_app.templates.deployment_file_templates import (get_initial_service_content,
-                                                                get_initial_deployment_content,
-                                                                get_container_template,
-                                                                get_docker_image, get_service_template,
-                                                                get_values_file_content,
-                                                                get_chart_file_content,
-                                                                get_deployment_file_content, get_services_template)
+from deployment_generator.deployment_file_templates import (get_initial_service_content,
+                                                            get_initial_deployment_content,
+                                                            get_container_template,
+                                                            get_docker_image, get_service_template,
+                                                            get_values_file_content,
+                                                            get_chart_file_content,
+                                                            get_deployment_file_content, get_services_template)
 
 VERBOSE_LOGGER = logging.getLogger("mid-verbose")
 LOGGER = logging.getLogger("root")
@@ -82,7 +82,7 @@ def generate_helm_deployments(tag, configuration, docker_image, expose_ports, he
             deployment_name = 'nodeapp-{}'.format(file_tags)
             helm_chart_path = os.path.join(helm_deployment_path, file_tags + "-chart")
             container_counter = container_counter + 1
-            template_dir = os.path.join(helm_chart_path, 'templates')
+            template_dir = os.path.join(helm_chart_path, '../monitoring_app/templates')
             os.makedirs(template_dir)
 
             # writing values.yaml file

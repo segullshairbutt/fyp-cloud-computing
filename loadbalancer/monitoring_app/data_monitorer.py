@@ -5,7 +5,7 @@ import os
 
 import monitoring_app.data_generator as data_generator
 import monitoring_app.templates.config_templates as config_templates
-import monitoring_app.utilities as utilities
+import deployment_generator.utilities as utilities
 
 VERBOSE_LOGGER = logging.getLogger("mid-verbose")
 LOGGER = logging.getLogger("root")
