@@ -5,7 +5,9 @@ import os
 
 import monitoring_app.data_generator as data_generator
 import monitoring_app.templates.config_templates as config_templates
-import deployment_generator.utilities as utilities
+from monitoring_app.constants import MAX_WN_LOAD, MAX_POD_LOAD
+from monitoring_app.models import Cluster, ContainerGroup, MethodGroup, PodGroup, RefPath, Method
+from monitoring_app.utilities import _join_components, _gen_dict_extract, _get_schema_only
 
 VERBOSE_LOGGER = logging.getLogger("mid-verbose")
 LOGGER = logging.getLogger("root")
@@ -213,13 +215,13 @@ def data_monitor(project):
             data_generator.generate_data(config_dir_path, new_config_file, new_data_file)
 
             # creating the server side code
-            utilities.create_server_stubs(
-                os.path.join(project.config_data_path, new_config_file),
-                project.directory,
-                helm_chart_path=project.helm_chart_path,
-                helm_chart_template_path=project.helm_chart_templates_path,
-                helm_deployment_path=project.helm_deployment_path
-            )
+            # utilities.create_server_stubs(
+            #     os.path.join(project.config_data_path, new_config_file),
+            #     project.directory,
+            #     helm_chart_path=project.helm_chart_path,
+            #     helm_chart_template_path=project.helm_chart_templates_path,
+            #     helm_deployment_path=project.helm_deployment_path
+            # )
 
             """create docker files according to how many containers we need in new config
             we are passing prev_files_tags here because at last 2 function that we call above
@@ -228,255 +230,274 @@ def data_monitor(project):
             # generate_deployment_files(config_and_metrics_generator.get_latest_filetag(config_dir_path), paths)
 
 
-class RefPath:
-    def __init__(self, ref_path):
-        paths = ref_path.split("#/info/x-clusters/")
-        parts = paths[1].split("/")
-        self.cluster = parts[0]
-        self.worker_node = parts[2]
-        self.pod_name = parts[4]
-        self.container_name = parts[6]
+def _derive_components(single_data_obj):
+    clusters = []
+    cls = single_data_obj["x-clusters"]
 
-    @property
-    def full_path(self):
-        return f"#/info/x-clusters/{self.cluster}/worker-nodes/{self.worker_node}/pods/{self.pod_name}/containers/{self.container_name}"
+    for cl in cls.values():
+        ref_path = RefPath.INITIAL + cl["name"]
+        clusters.append(Cluster(cl["name"], cl["metrics"]["load"], cl, ref_path))
 
+    methods = []
+    data_paths = single_data_obj["paths"]
+    for path_name, path in data_paths.items():
+        for method_name, method in path.items():
+            ref_path = RefPath(method["x-location"]["$ref"])
 
-class Method:
-    def __init__(self, path_name, method_name, ref_path, load, schema_name, full_method):
-        self.path_name = path_name
-        self.method_name = method_name
-        self.ref_path = ref_path
-        self.load = load
-        self.schema_name = schema_name
-        self.full_method = full_method
+            all_references = list(set(_gen_dict_extract('$ref', method)))
+            schema_name = _get_schema_only(all_references)
 
-    def __str__(self):
-        return self.path_name + ": " + self.method_name + \
-               " (" + self.ref_path.full_path + ")" + " <-> " + self.schema_name
+            methods.append(
+                Method(path_name, method_name, ref_path, method["x-metrics"]["load"], schema_name, method))
+    return clusters, methods
 
 
-MAX_ENDPOINT_LOAD = 60
-MAX_CPU_USAGE = 75
-MAX_RAM_USAGE = 70
+def _get_scalable_components(clusters):
+    scalable_wns = []
+    scalable_pods = []
+    for cluster in clusters:
+        for worker_node in cluster.worker_nodes:
+            if worker_node.load < MAX_WN_LOAD:
+                print("no need to scale ", str(worker_node))
 
-MIN_ENDPOINT_LOAD = 25
-MIN_CPU_USAGE = 40
-MIN_RAM_USAGE = 40
+                for wn_pod in worker_node.pods:
+                    if wn_pod.load < MAX_POD_LOAD:
+                        print("no need to scale", str(wn_pod))
+                    else:
+                        print(wn_pod, " need scaling.")
+                        scalable_pods.append(wn_pod)
+            else:
+                print(worker_node, " need scaling.")
+                scalable_wns.append(worker_node)
+    return scalable_wns, scalable_pods
 
 
-def _monitor_scaling(all_data, config_path):
+def _get_pod_groups(scalable_wns):
+    pod_groups = []
+    for wn in scalable_wns:
+        sum_of_pod_loads = sum(p.load for p in wn.pods)
+        pod_groups.append(PodGroup(wn.load, sum_of_pod_loads, wn.pods))
+    return pod_groups
+
+
+def _get_container_groups(scalable_pods):
+    container_groups = []
+    for scalable_pod in scalable_pods:
+        sum_of_container_loads = sum(c.load for c in scalable_pod.containers)
+        container_groups.append(
+            ContainerGroup(scalable_pod.load, sum_of_container_loads, scalable_pod.containers))
+    return container_groups
+
+
+def _monitor_scaling(config_data, config_path):
     VERBOSE_LOGGER.info("Monitor the scaling of pods and containers.")
 
     file_name = str(_get_latest_filetag(config_path)) + "config.json"
     template = copy.deepcopy(_get_config_file(os.path.join(config_path, file_name)))
     copied_template = copy.deepcopy(template)
 
-    for single_data_obj in all_data:
-        data_paths = single_data_obj["paths"]
-        data_pods = single_data_obj["x-pods"]
+    for single_data_object in config_data:
+        # converting provided data to objects
+        clusters, methods = _derive_components(single_data_object)
 
-        number_of_pods = len(data_pods)
+        scalable_wns, scalable_pods = _get_scalable_components(clusters)
 
-        methods = []
-        for path_name, path in data_paths.items():
-            for method_name, method in path.items():
-                ref_path = RefPath(method["x-location"]["$ref"])
+        # monitoring based on pods
+        monitor_pods(_get_container_groups(scalable_pods), methods, copied_template)
+        # scaling based upon the worker-nodes
+        _monitor_worker_nodes(_get_pod_groups(scalable_wns), methods, clusters[0], copied_template)
 
-                all_references = list(set(_gen_dict_extract('$ref', method)))
-                schema_name = _get_schema_only(all_references)
+        if copied_template == template:
+            print("no changes detected to template.")
+        else:
+            print("returning new template")
+            return copied_template
 
-                methods.append(
-                    Method(path_name, method_name, ref_path, method["x-metrics"]["load"], schema_name, method))
-
-        for method in methods:
-            if MIN_ENDPOINT_LOAD < method.load <= MAX_ENDPOINT_LOAD:
-                print("No Need of change {" + method.__str__() + "}")
-                continue
-
-            elif method.load > MAX_ENDPOINT_LOAD:
-                print("Needed to scale up {" + method.__str__() + "}")
-
-                # checking that the pod have more than one method already deployed.
-                number_of_methods_on_pod = _get_number_of_methods_on_path(methods, method.ref_path)
-                print("Number of methods on " + method.ref_path.pod_name + ": ", str(number_of_methods_on_pod))
-
-                if number_of_methods_on_pod > 1:
-                    new_pod_number = number_of_pods + 1
-                    # needed some mechanism to get the port right now i am just adding the pod number to existing port
-                    pod_template = _get_pod_template(new_pod_number)
-
-                    pod_name = pod_template["name"]
-                    method.ref_path.pod_name = pod_name
-                    copied_template["info"]["x-pods"][pod_name] = pod_template
-                    # copied_template["paths"][method.path_name][method.method_name]["x-location"][
-                    #     "$ref"] = method.ref_path.full_path
-
-                    schema_name = _get_schema_only(list(set(_gen_dict_extract('$ref', method.full_method))))
-                    schema_grouped_methods = _get_schema_grouped_methods(methods)
-
-                    # if sum of grouped methods is under threshold methods are grouped together
-                    sum_of_schema_group_methods_load = sum(m.load for m in schema_grouped_methods[schema_name])
-                    sum_of_schema_group_methods_load += method.load
-                    average_of_all_methods = sum_of_schema_group_methods_load / (
-                                len(schema_grouped_methods[schema_name]) + 1)
-
-                    LOGGER.info("AVERAGE OF GROUPED METHODS LOAD IS: " + str(average_of_all_methods))
-                    if schema_grouped_methods[schema_name] and average_of_all_methods < MAX_ENDPOINT_LOAD:
-                        LOGGER.info("methods are grouped in a pod.")
-                        _generate_template_by_methods(schema_grouped_methods[schema_name], copied_template, pod_name)
-                        no_of_methods = len(schema_grouped_methods[schema_name])
-                    else:
-                        # otherwise a new pod for new method is created..
-                        LOGGER.info("creating a new pod for single method.")
-                        _generate_template_by_methods([method], copied_template, pod_name)
-                        no_of_methods = 1
-
-                    # considering the latest number of pods
-                    number_of_pods = new_pod_number
-                    # decreasing the number of methods on current pod
-                    number_of_methods_on_pod -= no_of_methods
-
-            elif method.load <= MIN_ENDPOINT_LOAD:
-                print("Needed to scale down {" + method.__str__() + "}")
-                #         here now we will check on which pod we are able to merge this method
-                path_to_merge = _get_path_to_merge(methods, method.load, method.ref_path.full_path)
-                if not path_to_merge:
-                    print("No pod is able to bear the load of this method.")
-                else:
-                    print("(" + path_to_merge + "): is capable to take the load of {" + method.__str__() + "}")
-                    copied_template["paths"][method.path_name][method.method_name]["x-location"]["$ref"] = path_to_merge
-                    method.ref_path = RefPath(path_to_merge)
-
-            if copied_template == template:
-                print("no changes detected to template.")
-                continue
-            else:
-                print("returning new template")
-                _clean_template(methods, copied_template)
-                return copied_template
-
-    #     if no new template is made None type is returned back
+    # if no new template is made None type is returned back
     return None
 
 
-def _generate_template_by_methods(methods, prev_template, pod_name):
-    VERBOSE_LOGGER.info("re-writing the config template by using methods..")
-    for method in methods:
-        method.ref_path.pod_name = pod_name
-        prev_template["paths"][method.path_name][method.method_name]["x-location"][
-            "$ref"] = method.ref_path.full_path
-        LOGGER.info(f"writing {method.path_name}/{method.method_name} on {pod_name}")
-    LOGGER.info(f"wrote {str(len(methods))} of method on {pod_name}")
+def _monitor_worker_nodes(pod_groups, methods, cluster, copied_template):
+    for group in pod_groups:
+        print("entered in monitoring the pod groups.")
+        joined_pods, remaining_pods = _join_components(MAX_WN_LOAD, group.get_contributed_components())
 
+        # getting first pod from remaining pods
+        first_remaining_pod = remaining_pods[0]
+        sum_of_container_loads = sum(c.load for c in first_remaining_pod.containers)
+        container_group = ContainerGroup(first_remaining_pod.load, sum_of_container_loads, first_remaining_pod.containers)
 
-def _gen_dict_extract(key, var):
-    if hasattr(var, 'items'):
-        for k, v in var.items():
-            if k == key:
-                yield v
-            if isinstance(v, dict):
-                for result in _gen_dict_extract(key, v):
-                    yield result
-            elif isinstance(v, list):
-                for d in v:
-                    for result in _gen_dict_extract(key, d):
-                        yield result
+        sum_of_joined_pods_contribution = sum(j_p.contribution for j_p in joined_pods)
+        joined_containers, remaining_containers = _join_components(
+            (MAX_WN_LOAD - sum_of_joined_pods_contribution), container_group.get_contributed_components())
 
+        # getting first container from remaining containers
+        next_joining_container = remaining_containers[0]
 
-def _get_schema_only(references):
-    saved_schema = 'default'
-    for reference in references:
-        schema = reference.split("#/components/schemas/")
-        try:
-            saved_schema = schema[1]
-        except IndexError:
-            pass
+        next_joining_container_methods = []
+        for method in methods:
+            if method.ref_path.full_path == next_joining_container.ref_path:
+                next_joining_container_methods.append(method)
+        sum_of_method_loads = sum(m.load for m in next_joining_container_methods)
+        method_group = MethodGroup(next_joining_container.load, sum_of_method_loads, next_joining_container_methods)
+        sum_of_joined_containers_contribution = sum(j_c.contribution for j_c in joined_containers)
+        joined_methods, remaining_methods = _join_components(
+            MAX_WN_LOAD - sum_of_joined_pods_contribution - sum_of_joined_containers_contribution,
+            method_group.get_contributed_components())
 
-    return saved_schema
+        new_worker_node = None
+        wn_name = "wn" + str(len(cluster.worker_nodes) + 1)
+        if remaining_pods or remaining_containers or remaining_methods:
+            print("create a new WN", wn_name)
+            new_worker_node = {
+                "name": wn_name,
+                "metrics": {"load": ""},
+                "pods": {}
+            }
 
+        new_pod = None
+        pod_name = "pod" + str(len(remaining_pods[1:]) + 1)
+        if remaining_methods or remaining_containers[1:]:
+            print("creating a new POD", pod_name)
+            new_pod = {
+                "name": "pod1",
+                "metrics": {
+                    "load": ""
+                }, "containers": {}
+            }
 
-def _get_schema_grouped_methods(methods):
-    schema_methods = {}
-    for method in methods:
-        all_references = list(set(_gen_dict_extract('$ref', method.full_method)))
+        #         it means that all containers in first pod needs to get in new WN
+        remaining_pods_to_deploy = remaining_pods if len(joined_containers) == 0 else remaining_pods[1:]
 
-        schema_name = _get_schema_only(all_references)
+        if remaining_pods_to_deploy:
+            print("create a new worker-node and add the pods in it.")
+            for r_pod in remaining_pods_to_deploy:
+                for r_container in r_pod.containers:
+                    r_container_ref_path = RefPath(r_container.ref_path)
+                    r_container_ref_path.pod_name = pod_name
+                    r_container_ref_path.worker_node = wn_name
 
-        schema_methods.setdefault(schema_name, [])
-        schema_methods[schema_name].append(method)
+                    for method in methods:
+                        if method.ref_path.full_path == r_container.ref_path:
+                            method.ref_path = r_container_ref_path
+                            ind_method = copied_template[RefPath.PATHS][method.path_name][method.method_name]
+                            ind_method[RefPath.X_LOCATION][RefPath.REF] = r_container_ref_path.full_path
 
-    return schema_methods
+                            print(method)
 
+                    # also replacing the path of container
+                    r_container.ref_path = r_container_ref_path.full_path
 
-def _get_number_of_methods_on_path(methods, ref_path):
-    count = 0
-    for method in methods:
-        if method.ref_path.full_path == ref_path.full_path:
-            count += 1
-    return count
+        remaining_containers_to_deploy = remaining_containers if len(joined_methods) == 0 else remaining_containers[1:]
+        if remaining_containers_to_deploy:
+            print("create a new pod and add the containers in it.")
+            for r_container in remaining_containers_to_deploy:
+                r_container_ref_path = RefPath(r_container.ref_path)
+                r_container_ref_path.pod_name = pod_name
+                r_container_ref_path.worker_node = wn_name
 
+                # replacing the path of methods
+                for method in methods:
+                    if method.ref_path.full_path == r_container.ref_path:
+                        method.ref_path = r_container_ref_path
+                        ind_method = copied_template[RefPath.PATHS][method.path_name][method.method_name]
+                        ind_method[RefPath.X_LOCATION][RefPath.REF] = r_container_ref_path.full_path
 
-def _get_pod_template(number):
-    return {
-        "name": "pod" + str(number),
-        "metrics": {
-            "CPU": "",
-            "RAM": ""
-        },
-        "containers": {
-            "c1": {
-                "id": "c1",
+                        print(method)
+
+                # also replacing the path of container
+                r_container.ref_path = r_container_ref_path.full_path
+
+        cluster_template = copied_template[RefPath.INFO][RefPath.X_CLUSTERS][cluster.name][RefPath.WORKER_NODES]
+
+        if new_worker_node:
+            cluster_template[wn_name] = new_worker_node
+            if new_pod:
+                cluster_template[wn_name][RefPath.PODS][pod_name] = new_pod
+
+        if remaining_methods:
+            print("create a new container and add the methods in it")
+            container_name = "c" + str(len(remaining_containers[1:]) + 1)
+            new_container = {
+                "name": container_name,
                 "metrics": {
                     "load": ""
                 }
             }
+
+            ref_path = RefPath(cluster.name, new_worker_node["name"], pod_name, container_name)
+            cluster_template[wn_name][RefPath.PODS][pod_name][RefPath.CONTAINERS][container_name] = new_container
+
+            # changing the RefPath of remaining methods
+            for r_method in remaining_methods:
+                method = copied_template[RefPath.PATHS][r_method.path_name][r_method.method_name]
+                method[RefPath.X_LOCATION][RefPath.REF] = ref_path.full_path
+
+
+def monitor_pods(container_groups, methods, copied_template):
+    delete_able_containers = set()
+    # scaling based upon the pods
+    for group in container_groups:
+        print("entered in monitoring the container groups.")
+
+        #         segmenting the containers before and after the threshold
+        joined_containers, remaining_containers = _join_components(MAX_POD_LOAD, group.get_contributed_components())
+
+        first_remaining_container = remaining_containers[0]
+        first_remaining_container_methods = []
+
+        for method in methods:
+            if method.ref_path.full_path == first_remaining_container.ref_path:
+                first_remaining_container_methods.append(method)
+        sum_of_method_loads = sum(m.load for m in first_remaining_container_methods)
+
+        # creating a new instance of MethodGroup for remaining container & its methods
+        method_group = MethodGroup(first_remaining_container.load, sum_of_method_loads,
+                                   first_remaining_container_methods)
+        sum_of_joined_containers_contribution = sum(j_c.contribution for j_c in joined_containers)
+
+        joined_methods, remaining_methods = _join_components(
+            MAX_POD_LOAD - sum_of_joined_containers_contribution,
+            method_group.get_contributed_components())
+
+        current_ref_path = RefPath(group.components[0].ref_path)
+        pod_name = "pod" + str(len(current_ref_path.worker_node) + 1)
+        new_pod = {
+            "name": pod_name,
+            "metrics": {
+                "load": ""
+            }, "containers": {}
         }
-    }
 
+        container_name = "c" + str(len(remaining_containers[1:]) + 1)
+        new_container = {
+            "name": container_name,
+            "metrics": {
+                "load": ""
+            }
+        }
+        remaining_containers.append(new_container)
 
-def _get_path_to_merge(methods, new_load, current_full_ref_path):
-    loads = {}
-    counters = {}
-    for method in methods:
-        # adding the load of all methods with same reference path
-        load = loads.setdefault(method.ref_path.full_path, new_load)
-        load += method.load
+        worker_nodes = copied_template[RefPath.INFO][RefPath.X_CLUSTERS][current_ref_path.cluster][
+            RefPath.WORKER_NODES]
 
-        # counting the number of methods on specific reference path
-        counter = counters.setdefault(method.ref_path.full_path, 0)
-        counter += 1
+        method_path = copy.deepcopy(current_ref_path)
+        method_path.pod_name = pod_name
+        method_path.container_name = container_name
 
-    for full_ref_path, load in loads.items():
-        # we don't want to merge it in current pod.
-        if full_ref_path == current_full_ref_path:
-            continue
+        for r_method in remaining_methods:
+            print(r_method)
+            method = copied_template[RefPath.PATHS][r_method.path_name][r_method.name]
+            method[RefPath.X_LOCATION][RefPath.REF] = method_path.full_path
+        for r_container in remaining_containers:
+            new_pod["containers"][container_name] = r_container
 
-        average = 0
+            # deleting the existing container which will be added to new pod later
+            print("came once")
+            delete_able_containers.add(
+                RefPath(current_ref_path.cluster, current_ref_path.worker_node, current_ref_path.pod_name,
+                        r_container.container_name))
 
-        counter = counters[full_ref_path]
-        try:
-            average = load / counter
-        except ZeroDivisionError:
-            print(full_ref_path)
-            pass
+        print(delete_able_containers)
 
-        # if the loads of any ref_path is less than max endpoint load after addition it will be returned
-        if average < MAX_ENDPOINT_LOAD:
-            return full_ref_path
-    # if no path is capable to take this load None type will be returned
-    return None
-
-
-def _clean_template(methods, template):
-    method_pods = []
-    for method in methods:
-        method_pods.append(method.ref_path.pod_name)
-
-    method_pods = list(set(method_pods))
-    pod_names = list(template["info"]["x-pods"].keys())
-
-    for pod_name in pod_names:
-        if pod_name not in method_pods:
-            print(pod_name + " don't have any usage, it will be cleaned.")
-            del template["info"]["x-pods"][pod_name]
+        worker_nodes[current_ref_path.worker_node][RefPath.PODS][pod_name] = new_pod

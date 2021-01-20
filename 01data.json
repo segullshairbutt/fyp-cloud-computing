@@ -9,7 +9,7 @@
         "worker-nodes": {
           "wn1": {
             "metrics": {
-              "load": 80
+              "load": 40
             },
             "name": "wn1",
             "pods": {
@@ -80,7 +80,7 @@
               "pod3": {
                 "name": "pod3",
                 "metrics": {
-                  "load": 90
+                  "load": 30
                 },
                 "containers": {
                   "c1": {
