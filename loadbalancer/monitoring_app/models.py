@@ -44,14 +44,15 @@ class Method:
 
 
 class Component:
-    def __init__(self, name, load, full_component, ref_path=None):
+    def __init__(self, name, load, full_component, ref_path=None, is_new=False):
         self.name = name
         self.load = load
         self.full_component = full_component
         self.ref_path = ref_path
+        self.is_new = is_new
 
     def __str__(self):
-        return self.name + " ---- " + str(self.load) + " (" + self.ref_path + ")"
+        return self.name + " ---- " + str(self.load) + " (" + self.ref_path + ") " + "New ? " + str(self.is_new)
 
 
 import operator
@@ -72,8 +73,8 @@ class Group:
 
 
 class Cluster(Component):
-    def __init__(self, pod_name, load, full_component, ref_path):
-        super().__init__(pod_name, load, full_component, ref_path)
+    def __init__(self, name, load, full_component, ref_path, is_new=False):
+        super().__init__(name, load, full_component, ref_path, is_new)
         self.is_cluster = True
 
     @property
@@ -86,8 +87,8 @@ class Cluster(Component):
 
 
 class WorkerNode(Component):
-    def __init__(self, pod_name, load, full_component, ref_path):
-        super().__init__(pod_name, load, full_component, ref_path)
+    def __init__(self, name, load, full_component, ref_path, is_new=False):
+        super().__init__(name, load, full_component, ref_path, is_new)
         self.is_worker_node = True
 
     @property
@@ -100,8 +101,8 @@ class WorkerNode(Component):
 
 
 class Pod(Component):
-    def __init__(self, pod_name, load, full_component, ref_path):
-        super().__init__(pod_name, load, full_component, ref_path)
+    def __init__(self, name, load, full_component, ref_path, is_new=False):
+        super().__init__(name, load, full_component, ref_path, is_new)
         self.is_pod = True
         self.contribution = 0
 
@@ -115,8 +116,8 @@ class Pod(Component):
 
 
 class Container(Component):
-    def __init__(self, pod_name, load, full_component, ref_path):
-        super().__init__(pod_name, load, full_component, ref_path)
+    def __init__(self, name, load, full_component, ref_path, is_new=False):
+        super().__init__(name, load, full_component, ref_path, is_new)
         self.is_container = True
 
 
@@ -126,7 +127,7 @@ class PodGroup(Group):
         self.is_pod_group = True
 
     def __str__(self):
-        return "PodGroup sum_of_pod_loads: " + str(self.sum_of_loads)
+        return "PodGroup sum_of_loads: " + str(self.sum_of_loads)
 
 
 class ContainerGroup(Group):
@@ -135,7 +136,7 @@ class ContainerGroup(Group):
         self.is_container_group = True
 
     def __str__(self):
-        return "ContainerGroup sum_of_pod_loads: " + str(self.sum_of_loads)
+        return "ContainerGroup sum_of_loads: " + str(self.sum_of_loads)
 
 
 class MethodGroup(Group):
@@ -144,4 +145,4 @@ class MethodGroup(Group):
         self.is_method_group = True
 
     def __str__(self):
-        return "ContainerGroup sum_of_pod_loads: " + str(self.sum_of_loads)
+        return "ContainerGroup sum_of_loads: " + str(self.sum_of_loads)
