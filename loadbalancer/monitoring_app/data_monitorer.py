@@ -5,7 +5,8 @@ import os
 
 import monitoring_app.data_generator as data_generator
 import monitoring_app.templates.config_templates as config_templates
-from monitoring_app.constants import MAX_WN_LOAD, MAX_POD_LOAD
+from monitoring_app.constants import MAX_WN_LOAD, MAX_POD_LOAD, DEFAULT_SCHEMA_NAME, CL_LEVEL, WN_LEVEL, POD_LEVEL, \
+    SCHEMA_LEVEL
 from monitoring_app.models import Cluster, ContainerGroup, MethodGroup, PodGroup, RefPath, Method, Container
 from monitoring_app.utilities import _join_components, _gen_dict_extract, _get_schema_only
 
@@ -74,22 +75,22 @@ def _generate_related_data(dir_path, config_file, data_file_name):
         data_file_content = json.loads(data.read())
         data_file_content = data_file_content[len(data_file_content) - 1]
 
-        cluster = data_file_content["x-clusters"][next(iter(data_file_content["x-clusters"]))]
+        cluster = data_file_content[RefPath.X_CLUSTERS][next(iter(data_file_content[RefPath.X_CLUSTERS]))]
         cl_load = cluster["metrics"]["load"]
 
-        worker_node = cluster['worker-nodes'][next(iter(cluster['worker-nodes']))]
+        worker_node = cluster[RefPath.WORKER_NODES][next(iter(cluster[RefPath.WORKER_NODES]))]
         wn_load = worker_node['metrics']['load']
 
-        pod = worker_node['pods'][next(iter(worker_node['pods']))]
+        pod = worker_node[RefPath.PODS][next(iter(worker_node[RefPath.PODS]))]
         pod_load = pod['metrics']['load']
 
-        container = pod['containers'][next(iter(pod['containers']))]
+        container = pod[RefPath.CONTAINERS][next(iter(pod[RefPath.CONTAINERS]))]
         container_load = container['metrics']['load']
 
-        first_path_key = next(iter(data_file_content["paths"]))
-        first_method_key = next(iter(data_file_content["paths"][first_path_key]))
+        first_path_key = next(iter(data_file_content[RefPath.PATHS]))
+        first_method_key = next(iter(data_file_content[RefPath.PATHS][first_path_key]))
 
-        method_load = data_file_content["paths"][first_path_key][first_method_key]["x-metrics"]["load"]
+        method_load = data_file_content[RefPath.PATHS][first_path_key][first_method_key]["x-metrics"]["load"]
 
         kwargs = {
             "cl_load": cl_load,
@@ -117,11 +118,11 @@ def data_monitor(project):
 
         # getting all methods from a fat container
         methods = []
-        for path_name, path in initial_template["paths"].items():
+        for path_name, path in initial_template[RefPath.PATHS].items():
             for method_name, method in path.items():
-                ref_path = RefPath(method["x-location"]["$ref"])
+                ref_path = RefPath(method[RefPath.X_LOCATION][RefPath.REF])
 
-                all_references = list(set(_gen_dict_extract('$ref', method)))
+                all_references = list(set(_gen_dict_extract(RefPath.REF, method)))
                 schema_name = _get_schema_only(all_references)
 
                 methods.append(Method(path_name, method_name, ref_path, '', schema_name, method))
@@ -142,13 +143,14 @@ def data_monitor(project):
 
                 container_template = {'id': new_container, 'metrics': {'load': ''}}
                 ref_path = first_method.ref_path
-                copied_template["info"]["x-clusters"][ref_path.cluster]["worker-nodes"][ref_path.worker_node]["pods"][
-                    ref_path.pod_name]["containers"][new_container] = container_template
+                copied_template[RefPath.INFO][RefPath.X_CLUSTERS][ref_path.cluster][RefPath.WORKER_NODES][
+                    ref_path.worker_node][RefPath.PODS][ref_path.pod_name][RefPath.CONTAINERS][
+                    new_container] = container_template
 
                 for method in schema_methods:
                     method.ref_path.container_name = new_container
-                    method.full_method["x-location"]["$ref"] = method.ref_path.full_path
-                    copied_template["paths"][method.path_name][method.method_name] = method.full_method
+                    method.full_method[RefPath.X_LOCATION][RefPath.REF] = method.ref_path.full_path
+                    copied_template[RefPath.PATHS][method.path_name][method.method_name] = method.full_method
             index += 1
 
         # generate the name for new configuration file
@@ -197,7 +199,7 @@ def data_monitor(project):
             print('--------------------------')
             VERBOSE_LOGGER.info("changes detected, trying to create new configuration")
             # how much containers we need for new template (config.json file)
-            LOGGER.info('Total pods: {}'.format(len(new_template["info"]["x-pods"])))
+            LOGGER.info('Total pods: {}'.format(len(new_template[RefPath.INFO][RefPath.X_CLUSTERS])))
 
             print('--------------------------')
             # generate stuff for new files
@@ -230,19 +232,119 @@ def data_monitor(project):
             # generate_deployment_files(config_and_metrics_generator.get_latest_filetag(config_dir_path), paths)
 
 
+def _monitor_scaling(config_data, config_path):
+    VERBOSE_LOGGER.info("Monitor the scaling of pods and containers.")
+
+    file_name = str(_get_latest_filetag(config_path)) + "config.json"
+    template = copy.deepcopy(_get_config_file(os.path.join(config_path, file_name)))
+    copied_template = copy.deepcopy(template)
+
+    for single_data_object in config_data:
+        # converting provided data to objects
+        clusters, methods = _derive_components(single_data_object)
+
+        scalable_wns, scalable_pods = _get_scalable_components(clusters)
+
+        # monitoring based on pods
+        _monitor_pods(_get_container_groups(scalable_pods), methods, copied_template)
+        # scaling based upon the worker-nodes
+        _monitor_worker_nodes(_get_pod_groups(scalable_wns), methods, clusters[0], copied_template)
+
+        if copied_template == template:
+            LOGGER.info("No changed detected in template.")
+            print("no changes detected to template.")
+        else:
+            _adjust_schema_levels(copied_template)
+            LOGGER.info("Returning new template. ")
+            return copied_template
+
+    # if no new template is made None type is returned back
+    return None
+
+
+def _adjust_schema_levels(template):
+    VERBOSE_LOGGER.info("Adjusting the storage level of schemas.")
+
+    config_paths = template[RefPath.PATHS]
+    methods = []
+    for path_name, path in config_paths.items():
+        for method_name, method in path.items():
+            ref_path = RefPath(method[RefPath.X_LOCATION][RefPath.REF])
+
+            all_references = list(set(_gen_dict_extract(RefPath.REF, method)))
+            schema_name = _get_schema_only(all_references)
+
+            methods.append(Method(path_name, method_name, ref_path, method["x-metrics"]["load"], schema_name, method))
+
+    method_schemas = {}
+    for method in methods:
+        method_schemas.setdefault(method.schema_name, {RefPath.PODS: set(), RefPath.WORKER_NODES: set()})
+        method_schemas[method.schema_name][RefPath.PODS].add(method.ref_path.pod_name)
+        method_schemas[method.schema_name][RefPath.WORKER_NODES].add(method.ref_path.worker_node)
+
+    # it will remove the schema of stateless methods
+    if DEFAULT_SCHEMA_NAME in method_schemas.keys():
+        del method_schemas[DEFAULT_SCHEMA_NAME]
+
+    final_schema_levels = dict()
+    for schema_name, values in method_schemas.items():
+        if len(values["worker-nodes"]) > 1:
+            LOGGER.info(f"Set storage-level of {schema_name} to {CL_LEVEL}")
+            final_schema_levels[schema_name] = CL_LEVEL
+        elif len(values["pods"]) > 1:
+            LOGGER.info(f"Set storage-level of {schema_name} to {WN_LEVEL}")
+            final_schema_levels[schema_name] = WN_LEVEL
+        else:
+            LOGGER.info(f"Set storage-level of {schema_name} to {POD_LEVEL}")
+            final_schema_levels[schema_name] = POD_LEVEL
+
+    config_schemas = template["components"]["schemas"]
+    for schema_name, level in final_schema_levels.items():
+        if schema_name in config_schemas.keys():
+            config_schemas[schema_name][SCHEMA_LEVEL] = level
+
+    return template
+
+
+def _get_wn(wn_name):
+    return {
+        "name": wn_name,
+        "metrics": {"load": ""},
+        "pods": {}
+    }
+
+
+def _get_pod(pod_name):
+    return {
+        "name": pod_name,
+        "metrics": {
+            "load": ""
+        }, "containers": {}
+    }
+
+
+def _get_container(container_name):
+    return {
+        "name": container_name,
+        "metrics": {
+            "load": ""
+        }
+    }
+
+
 def _derive_components(single_data_obj):
     clusters = []
-    cls = single_data_obj["x-clusters"]
+    cls = single_data_obj[RefPath.X_CLUSTERS]
 
     for cl in cls.values():
         ref_path = RefPath.INITIAL + cl["name"]
         clusters.append(Cluster(cl["name"], cl["metrics"]["load"], cl, ref_path))
 
     methods = []
-    data_paths = single_data_obj["paths"]
+    data_paths = single_data_obj[RefPath.PATHS]
     for path_name, path in data_paths.items():
         for method_name, method in path.items():
-            ref_path = RefPath(method["x-location"]["$ref"])
+            ref_path = RefPath(method[RefPath.X_LOCATION][RefPath.REF])
 
             all_references = list(set(_gen_dict_extract('$ref', method)))
             schema_name = _get_schema_only(all_references)
@@ -289,60 +391,6 @@ def _get_container_groups(scalable_pods):
     return container_groups
 
 
-def _monitor_scaling(config_data, config_path):
-    VERBOSE_LOGGER.info("Monitor the scaling of pods and containers.")
-
-    file_name = str(_get_latest_filetag(config_path)) + "config.json"
-    template = copy.deepcopy(_get_config_file(os.path.join(config_path, file_name)))
-    copied_template = copy.deepcopy(template)
-
-    for single_data_object in config_data:
-        # converting provided data to objects
-        clusters, methods = _derive_components(single_data_object)
-
-        scalable_wns, scalable_pods = _get_scalable_components(clusters)
-
-        # monitoring based on pods
-        _monitor_pods(_get_container_groups(scalable_pods), methods, copied_template)
-        # scaling based upon the worker-nodes
-        _monitor_worker_nodes(_get_pod_groups(scalable_wns), methods, clusters[0], copied_template)
-
-        if copied_template == template:
-            print("no changes detected to template.")
-        else:
-            print("returning new template")
-            return copied_template
-
-    # if no new template is made None type is returned back
-    return None
-
-
-def _get_wn(wn_name):
-    return {
-        "name": wn_name,
-        "metrics": {"load": ""},
-        "pods": {}
-    }
-
-
-def _get_pod(pod_name):
-    return {
-        "name": pod_name,
-        "metrics": {
-            "load": ""
-        }, "containers": {}
-    }
-
-
-def _get_container(container_name):
-    return {
-        "name": container_name,
-        "metrics": {
-            "load": ""
-        }
-    }
-
-
 def _monitor_worker_nodes(pod_groups, methods, cluster, copied_template):
     VERBOSE_LOGGER.info("entered into _monitor_worker_nodes")
     for group in pod_groups:
@@ -350,92 +398,108 @@ def _monitor_worker_nodes(pod_groups, methods, cluster, copied_template):
         cluster_template = copied_template[RefPath.INFO][RefPath.X_CLUSTERS][cluster.name][RefPath.WORKER_NODES]
         joined_pods, remaining_pods = _join_components(MAX_WN_LOAD, group.get_contributed_components())
 
-        # getting first pod from remaining pods
-        first_remaining_pod = remaining_pods[0]
-        sum_of_container_loads = sum(c.load for c in first_remaining_pod.containers)
-        container_group = ContainerGroup(first_remaining_pod.load, sum_of_container_loads,
-                                         first_remaining_pod.containers)
+        if not remaining_pods:
+            LOGGER.info("No remaining pods found.")
+        else:
+            # getting first pod from remaining pods
+            first_remaining_pod = remaining_pods[0]
+            sum_of_container_loads = sum(c.load for c in first_remaining_pod.containers)
+            container_group = ContainerGroup(first_remaining_pod.load, sum_of_container_loads,
+                                             first_remaining_pod.containers)
 
-        sum_of_joined_pods_contribution = sum(j_p.contribution for j_p in joined_pods)
-        joined_containers, remaining_containers = _join_components(
-            (MAX_WN_LOAD - sum_of_joined_pods_contribution), container_group.get_contributed_components())
+            sum_of_joined_pods_contribution = sum(j_p.contribution for j_p in joined_pods)
+            joined_containers, remaining_containers = _join_components(
+                (MAX_WN_LOAD - sum_of_joined_pods_contribution), container_group.get_contributed_components())
 
-        # getting first container from remaining containers
-        first_remaining_container = remaining_containers[0]
+            print("Joined Containers: " + str(len(joined_containers)),
+                  "Remaining Containers: " + str(len(remaining_containers)))
 
-        first_remaining_container_methods = []
-        for method in methods:
-            if method.ref_path.full_path == first_remaining_container.ref_path:
-                first_remaining_container_methods.append(method)
-        sum_of_method_loads = sum(m.load for m in first_remaining_container_methods)
-        method_group = MethodGroup(first_remaining_container.load, sum_of_method_loads,
-                                   first_remaining_container_methods)
-        sum_of_joined_containers_contribution = sum(j_c.contribution for j_c in joined_containers)
-        joined_methods, remaining_methods = _join_components(
-            MAX_WN_LOAD - sum_of_joined_pods_contribution - sum_of_joined_containers_contribution,
-            method_group.get_contributed_components())
-
-        new_worker_node = None
-        new_pod = None
-        wn_name = "wn" + str(len(cluster.worker_nodes) + 1)
-        if remaining_pods or remaining_containers or remaining_methods:
+            wn_name = "wn" + str(len(cluster.worker_nodes) + 1)
             LOGGER.info("Creating a new worker-node: " + wn_name)
             new_worker_node = _get_wn(wn_name)
 
-        pod_name = "pod" + str(len(remaining_pods[1:]) + 1)
-        if remaining_methods or remaining_containers[1:]:
+            pod_name = "pod" + str(len(remaining_pods[1:]) + 1)
             LOGGER.info("Creating a new pod: " + pod_name)
             new_pod = _get_pod(pod_name)
+            joined_methods = []
 
-        if remaining_methods:
-            LOGGER.info("Remaining methods exist, so create a new container and add them.")
-            container_name = "c" + str(len(remaining_containers[1:]) + 1)
-            new_container_ref_path = RefPath(cluster.name, new_worker_node["name"], pod_name, container_name)
-            new_pod[RefPath.CONTAINERS][container_name] = _get_container(container_name)
-            # have to be seen later here.
-            # changing the RefPath of remaining methods
-            for r_method in remaining_methods:
-                method = copied_template[RefPath.PATHS][r_method.path_name][r_method.method_name]
-                method[RefPath.X_LOCATION][RefPath.REF] = new_container_ref_path.full_path
+            if not remaining_containers:
+                LOGGER.info("No Remaining containers found.")
+            else:
+                # getting first container from remaining containers
+                first_remaining_container = remaining_containers[0]
 
-        remaining_containers_to_deploy = remaining_containers if len(joined_methods) == 0 else remaining_containers[1:]
-        if remaining_containers_to_deploy:
-            LOGGER.info("Remaining containers exist, so create a new pod and add them. ")
-            print("create a new pod and add the containers in it.")
-            for r_container in remaining_containers_to_deploy:
-                r_container_ref_path = RefPath(r_container.ref_path)
-                r_container_ref_path.pod_name = pod_name
-                r_container_ref_path.worker_node = wn_name
-
-                new_pod[RefPath.CONTAINERS][r_container.name] = _get_container(r_container.name)
-                # replacing the path of methods
+                first_remaining_container_methods = []
                 for method in methods:
-                    if method.ref_path.full_path == r_container.ref_path:
-                        LOGGER.info("Scaling the methods of " + str(r_container))
-                        method.ref_path = r_container_ref_path
-                        ind_method = copied_template[RefPath.PATHS][method.path_name][method.method_name]
-                        ind_method[RefPath.X_LOCATION][RefPath.REF] = r_container_ref_path.full_path
-                        print(method)
+                    if method.ref_path.full_path == first_remaining_container.ref_path:
+                        first_remaining_container_methods.append(method)
+                sum_of_method_loads = sum(m.load for m in first_remaining_container_methods)
+                method_group = MethodGroup(first_remaining_container.load, sum_of_method_loads,
+                                           first_remaining_container_methods)
+                sum_of_joined_containers_contribution = sum(j_c.contribution for j_c in joined_containers)
+                joined_methods, remaining_methods = _join_components(
+                    MAX_WN_LOAD - sum_of_joined_pods_contribution - sum_of_joined_containers_contribution,
+                    method_group.get_contributed_components())
 
-        # it means that all containers in first pod needs to get in new WN
-        remaining_pods_to_deploy = remaining_pods if len(joined_containers) == 0 else remaining_pods[1:]
-        if remaining_pods_to_deploy:
-            LOGGER.info("Add the pods into newly created WN.")
-            for r_pod in remaining_pods_to_deploy:
-                new_worker_node[RefPath.PODS][r_pod.name] = r_pod.full_component
-                for r_container in r_pod.containers:
+                if remaining_methods:
+                    LOGGER.info("Remaining methods exist, so create a new container and add them.")
+                    container_name = "c" + str(len(remaining_containers[1:]) + 1)
+                    new_container_ref_path = RefPath(cluster.name, new_worker_node["name"], pod_name, container_name)
+                    new_pod[RefPath.CONTAINERS][container_name] = _get_container(container_name)
+                    # have to be seen later here.
+                    # changing the RefPath of remaining methods
+                    for r_method in remaining_methods:
+                        method = copied_template[RefPath.PATHS][r_method.path_name][r_method.method_name]
+                        method[RefPath.X_LOCATION][RefPath.REF] = new_container_ref_path.full_path
+
+            remaining_containers_to_deploy = remaining_containers if len(joined_methods) == 0 else remaining_containers[
+                                                                                                   1:]
+            if remaining_containers_to_deploy:
+                LOGGER.info("Remaining containers exist, so create a new pod and add them. ")
+                print("create a new pod and add the containers in it.")
+                for r_container in remaining_containers_to_deploy:
                     r_container_ref_path = RefPath(r_container.ref_path)
+                    r_container_ref_path.pod_name = pod_name
                     r_container_ref_path.worker_node = wn_name
 
+                    new_pod[RefPath.CONTAINERS][r_container.name] = _get_container(r_container.name)
+                    # replacing the path of methods
                     for method in methods:
                         if method.ref_path.full_path == r_container.ref_path:
-                            LOGGER.info("scaling ", method)
+                            LOGGER.info("Scaling the methods of " + str(r_container))
                             method.ref_path = r_container_ref_path
                             ind_method = copied_template[RefPath.PATHS][method.path_name][method.method_name]
                             ind_method[RefPath.X_LOCATION][RefPath.REF] = r_container_ref_path.full_path
+                            print(method)
 
-        new_worker_node[RefPath.PODS][new_pod["name"]] = new_pod
-        cluster_template[wn_name] = new_worker_node
+            # it means that all containers in first pod needs to get in new WN
+            remaining_pods_to_deploy = remaining_pods if len(joined_containers) == 0 else remaining_pods[1:]
+            if remaining_pods_to_deploy:
+                LOGGER.info("Add the pods into newly created WN.")
+                for r_pod in remaining_pods_to_deploy:
+                    new_worker_node[RefPath.PODS][r_pod.name] = r_pod.full_component
+                    for r_container in r_pod.containers:
+                        r_container_ref_path = RefPath(r_container.ref_path)
+                        r_container_ref_path.worker_node = wn_name
+
+                        for method in methods:
+                            if method.ref_path.full_path == r_container.ref_path:
+                                LOGGER.info("scaling ", method)
+                                method.ref_path = r_container_ref_path
+                                ind_method = copied_template[RefPath.PATHS][method.path_name][method.method_name]
+                                ind_method[RefPath.X_LOCATION][RefPath.REF] = r_container_ref_path.full_path
+
+            # adding a new pod only if it has containers
+            if new_pod[RefPath.CONTAINERS]:
+                new_worker_node[RefPath.PODS][new_pod["name"]] = new_pod
+            else:
+                LOGGER.info("No containers found in new POD, so it is ignored.")
+
+            # adding the newly created worker node
+            if new_worker_node[RefPath.PODS]:
+                cluster_template[wn_name] = new_worker_node
+            else:
+                LOGGER.info("No PODS found in new worker-node, so it is ignored.")
 
 
 def _monitor_pods(container_groups, methods, copied_template):
@@ -448,61 +512,68 @@ def _monitor_pods(container_groups, methods, copied_template):
         # segmenting the containers before and after the threshold
         joined_containers, remaining_containers = _join_components(MAX_POD_LOAD, group.get_contributed_components())
 
-        first_remaining_container = remaining_containers[0]
-        first_remaining_container_methods = []
-
-        for method in methods:
-            if method.ref_path.full_path == first_remaining_container.ref_path:
-                first_remaining_container_methods.append(method)
-        sum_of_method_loads = sum(m.load for m in first_remaining_container_methods)
-
-        # creating a new instance of MethodGroup for remaining container & its methods
-        method_group = MethodGroup(first_remaining_container.load, sum_of_method_loads,
-                                   first_remaining_container_methods)
-        sum_of_joined_containers_contribution = sum(j_c.contribution for j_c in joined_containers)
-
-        joined_methods, remaining_methods = _join_components(
-            MAX_POD_LOAD - sum_of_joined_containers_contribution,
-            method_group.get_contributed_components())
-
-        LOGGER.info("Joined methods: " + str(len(joined_methods)))
-        LOGGER.info("Remaining methods: " + str(len(remaining_methods)))
-
         current_ref_path = RefPath(group.components[0].ref_path)
-        pod_name = "pod" + str(len(current_ref_path.worker_node) + 1)
+        config_pods = copied_template[RefPath.INFO][RefPath.X_CLUSTERS][current_ref_path.cluster][
+            RefPath.WORKER_NODES][current_ref_path.worker_node][RefPath.PODS]
+
+        pod_name = "pod" + str(len(config_pods) + 1)
         new_pod = _get_pod(pod_name)
         LOGGER.info("New pod name: " + pod_name)
 
-        container_name = "c" + str(len(remaining_containers[1:]) + 1)
-        new_container = _get_container(container_name)
-        LOGGER.info("New Container name: "+ container_name)
+        if not remaining_containers:
+            LOGGER.info("No remaining containers found.")
+        else:
+            first_remaining_container = remaining_containers[0]
+            first_remaining_container_methods = []
 
-        method_path = copy.deepcopy(current_ref_path)
-        method_path.pod_name = pod_name
-        method_path.container_name = container_name
-        remaining_containers.append(Container(container_name, 0, new_container, method_path.full_path, True))
+            for method in methods:
+                if method.ref_path.full_path == first_remaining_container.ref_path:
+                    first_remaining_container_methods.append(method)
+            sum_of_method_loads = sum(m.load for m in first_remaining_container_methods)
 
-        worker_nodes = copied_template[RefPath.INFO][RefPath.X_CLUSTERS][current_ref_path.cluster][
-            RefPath.WORKER_NODES]
+            # creating a new instance of MethodGroup for remaining container & its methods
+            method_group = MethodGroup(first_remaining_container.load, sum_of_method_loads,
+                                       first_remaining_container_methods)
+            sum_of_joined_containers_contribution = sum(j_c.contribution for j_c in joined_containers)
 
-        for r_method in remaining_methods:
-            print(r_method)
-            method = copied_template[RefPath.PATHS][r_method.path_name][r_method.method_name]
-            method[RefPath.X_LOCATION][RefPath.REF] = method_path.full_path
+            joined_methods, remaining_methods = _join_components(
+                MAX_POD_LOAD - sum_of_joined_containers_contribution,
+                method_group.get_contributed_components())
 
-            LOGGER.info("Remaining methods added into new container: " + method_path.container_name)
-        for r_container in remaining_containers:
-            new_pod["containers"][container_name] = r_container.full_component
+            LOGGER.info("Joined methods: " + str(len(joined_methods)))
+            LOGGER.info("Remaining methods: " + str(len(remaining_methods)))
 
-            LOGGER.info("Remaining containers are inserted into new Pod: " + new_pod["name"])
+            container_name = "c" + str(len(remaining_containers[1:]) + 1)
+            new_container = _get_container(container_name)
+            LOGGER.info("New Container name: " + container_name)
 
-            # deleting the existing container which will be added to new pod later
-            if not r_container.is_new:
-                LOGGER.info(str(r_container) + " added into deletable containers.")
-                delete_able_containers.add(
-                    RefPath(current_ref_path.cluster, current_ref_path.worker_node, current_ref_path.pod_name,
-                            r_container.name))
+            method_path = copy.deepcopy(current_ref_path)
+            method_path.pod_name = pod_name
+            method_path.container_name = container_name
+            remaining_containers.append(Container(container_name, 0, new_container, method_path.full_path, True))
 
-        print(delete_able_containers)
+            for r_method in remaining_methods:
+                print(r_method)
+                method = copied_template[RefPath.PATHS][r_method.path_name][r_method.method_name]
+                method[RefPath.X_LOCATION][RefPath.REF] = method_path.full_path
+                LOGGER.info("Remaining methods added into new container: " + method_path.container_name)
 
-        worker_nodes[current_ref_path.worker_node][RefPath.PODS][pod_name] = new_pod
+            current_container_counter = len(remaining_containers[1:])
+            for r_container in remaining_containers:
+                current_container_counter += 1
+                # continuously incrementing the number of containers
+                container_name = "c" + str(current_container_counter)
+                new_pod["containers"][container_name] = r_container.full_component
+
+                LOGGER.info("Remaining containers are inserted into new Pod: " + new_pod["name"])
+
+                # deleting the existing container which will be added to new pod later
+                if not r_container.is_new:
+                    LOGGER.info(str(r_container) + " added into deletable containers.")
+                    delete_able_containers.add(
+                        RefPath(current_ref_path.cluster, current_ref_path.worker_node, current_ref_path.pod_name,
+                                r_container.name))
+
+            print(delete_able_containers)
+
+            config_pods[pod_name] = new_pod

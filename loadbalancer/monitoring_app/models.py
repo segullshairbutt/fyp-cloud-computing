@@ -1,3 +1,6 @@
+import operator
+
+
 class RefPath:
     INITIAL = "#/info/x-clusters/"
     WORKER_NODES = "worker-nodes"
@@ -25,7 +28,8 @@ class RefPath:
 
     @property
     def full_path(self):
-        return f"{RefPath.INITIAL}{self.cluster}/{RefPath.WORKER_NODES}/{self.worker_node}/{RefPath.PODS}/{self.pod_name}/{RefPath.CONTAINERS}/{self.container_name}"
+        return f"{RefPath.INITIAL}{self.cluster}/{RefPath.WORKER_NODES}/{self.worker_node}/{RefPath.PODS}/" \
+               f"{self.pod_name}/{RefPath.CONTAINERS}/{self.container_name}"
 
 
 class Method:
@@ -53,9 +57,6 @@ class Component:
 
     def __str__(self):
         return self.name + " ---- " + str(self.load) + " (" + self.ref_path + ") " + "New ? " + str(self.is_new)
-
-
-import operator
 
 
 class Group:
