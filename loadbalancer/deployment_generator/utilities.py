@@ -9,6 +9,8 @@ from zipfile import ZipFile
 
 from django.conf import settings
 
+from monitoring_app.models import Cluster, RefPath, Method
+from monitoring_app.utilities import _gen_dict_extract, _get_schema_only
 
 VERBOSE_LOGGER = logging.getLogger("mid-verbose")
 LOGGER = logging.getLogger("root")
@@ -82,53 +84,95 @@ ENTRYPOINT ["java","-jar","/app.jar"]""")
         deployment_file.write(helm_deployment)
 
 
-def _get_templates(config_file, project_directory):
+def _get_method_by_ref(ref_path, methods):
+    for method in methods:
+        if method.ref_path.full_path == ref_path:
+            return method
+    return None
+
+
+def _get_templates(config_file, new_config_directory):
     VERBOSE_LOGGER.info("Started creating templates.")
 
+    file_tag = config_file.split("config.json")
+
     with open(config_file, "r") as template_file:
-        template = json.load(template_file)
+        config_template = json.load(template_file)
+        cluster_template = config_template['info']['x-clusters']
+        name = next(iter(cluster_template))
+        cluster = Cluster(name, 0, cluster_template[name], '#/info/x-clusters/' + name)
+
+        paths_template = config_template['paths']
+        schemas_template = config_template['components']['schemas']
+
         methods = []
-        for path_name, path in template["paths"].items():
+        for path_name, path in config_template['paths'].items():
             for method_name, method in path.items():
-                ref_path = RefPath(method["x-location"]["$ref"])
-                methods.append(Method(path_name, method_name, ref_path, method))
+                ref_path = RefPath(method[RefPath.X_LOCATION][RefPath.REF])
+                all_references = list(set(_gen_dict_extract(RefPath.REF, method)))
+                schema_name = _get_schema_only(all_references)
 
-        pods = []
-        for pod_name, pod in template["info"]["x-pods"].items():
-            full_pod = dict()
-            full_pod[pod_name] = pod
-            pods.append(Pod(pod_name, full_pod))
-        templates = []
+                methods.append(Method(path_name, method_name, ref_path, 0, schema_name, method))
 
-        count = 1
-        for pod in pods:
-            sample_template = copy.deepcopy(template)
-            pod_methods = {}
-            for method in methods:
-                if method.ref_path.pod_name == pod.pod_name:
-                    pod_methods.setdefault(method.path_name, {})
-                    pod_methods[method.path_name][method.method_name] = method.full_method
+        config_containers = {}
+        for wn in cluster.worker_nodes:
+            for pod in wn.pods:
+                for container in pod.containers:
+                    method = _get_method_by_ref(container.ref_path, methods)
+                    if method:
+                        config_container_ref = config_containers.setdefault(container.ref_path, {})
+                        config_container_ref['container'] = container
+                        config_container_ref_methods = config_container_ref.setdefault('methods', [])
+                        config_container_ref_methods.append(method)
 
-            # writing configs for each pod
-            if len(pod_methods):
-                sample_template["info"]["x-pods"] = pod.full_pod
-                sample_template["paths"] = pod_methods
+        new_templates = {}
+        for path, config_container in config_containers.items():
+            copied_template = copy.deepcopy(config_template)
+            ref_path = RefPath(path)
+            container_obj = config_container['container']
+            container = {container_obj.name: container_obj.full_component}
 
-                config_name = str(config_file.split('/')[-1]).split('.')[0]
-                config_name = str(count) + "_" + config_name + ".json"
-                new_configs_path = os.path.join(project_directory, "new_configs")
-                if not os.path.isdir(new_configs_path):
-                    os.makedirs(new_configs_path)
+            # keeping only current worker-node
+            wn_template = copied_template[ref_path.INFO][ref_path.X_CLUSTERS][ref_path.cluster][ref_path.WORKER_NODES]
+            wn_template = {ref_path.worker_node: wn_template[ref_path.worker_node]}
+            # keeping only current pod
+            pods_template = wn_template[ref_path.worker_node][ref_path.PODS]
+            pods_template = {ref_path.pod_name: pods_template[ref_path.pod_name]}
+            # keeping only current container
+            pods_template[ref_path.pod_name][ref_path.CONTAINERS] = container
 
-                file_path = os.path.join(new_configs_path, config_name)
-                with open(file_path, "w") as new_file:
-                    json.dump(sample_template, new_file)
-                    templates.append(file_path)
+            wn_template[ref_path.worker_node][ref_path.PODS] = pods_template
+            copied_template[ref_path.INFO][ref_path.X_CLUSTERS][ref_path.cluster][ref_path.WORKER_NODES] = wn_template
 
-                LOGGER.info(str(len(pod_methods)) + " endpoint methods added to " + pod.pod_name)
+            paths = {}
+            schemas = {}
+            for method in config_container['methods']:
+                methods_config = paths.setdefault(method.path_name, {})
+                methods_config[method.method_name] = method.full_method
+                if method.schema_name != 'default':
+                    schemas[method.schema_name] = schemas_template[method.schema_name]
 
-            count += 1
-        return templates
+            copied_template['paths'] = paths
+            copied_template['components']['schemas'] = schemas
+
+            new_cluster_template = new_templates.setdefault(ref_path.cluster, {})
+            new_wn_template = new_cluster_template.setdefault(ref_path.worker_node, {})
+            new_pod_template = new_wn_template.setdefault(ref_path.pod_name, {})
+            new_pod_template[ref_path.container_name] = copied_template
+
+        new_paths_template = copy.deepcopy(new_templates)
+        for cl, wns in new_templates.items():
+            for wn, pods in wns.items():
+                for pod, single_container in pods.items():
+                    for container_name, config in single_container.items():
+                        output_file_name = f"{file_tag}_{cl}_{wn}_{pod}_{container_name}.json"
+                        output_file_path = os.path.join(new_config_directory, output_file_name)
+                        with open(output_file_path, "w") as output_file:
+                            json.dump(new_templates[0], output_file, indent=2)
+
+                        new_paths_template[cl][wn][pod][container_name] = output_file_path
+
+        return new_paths_template
 
 
 def _delete_folder_content(folder):
@@ -144,34 +188,6 @@ def _delete_folder_content(folder):
             LOGGER.error('Failed to delete %s. Reason: %s' % (file_path, e))
             print('Failed to delete %s. Reason: %s' % (file_path, e))
 
-
-class Method:
-    def __init__(self, path_name, method_name, ref_path, full_method):
-        self.path_name = path_name
-        self.method_name = method_name
-        self.ref_path = ref_path
-        self.full_method = full_method
-
-    def __str__(self):
-        return self.path_name + ": " + self.method_name + " (" + self.ref_path.full_path + ")"
-
-
-class Pod:
-    def __init__(self, pod_name, full_pod):
-        self.pod_name = pod_name
-        self.full_pod = full_pod
-
-
-class RefPath:
-    def __init__(self, ref_path):
-        paths = ref_path.split("#/info/x-pods/")
-        parts = paths[1].split("/")
-        self.pod_name = parts[0]
-        self.container_name = parts[2]
-
-    @property
-    def full_path(self):
-        return "#/info/x-pods/" + self.pod_name + "/containers/" + self.container_name + "/port"
 
 
 def get_helm_chart(version, count, image_name):
