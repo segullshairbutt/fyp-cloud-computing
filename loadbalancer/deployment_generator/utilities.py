@@ -9,8 +9,9 @@ from zipfile import ZipFile
 
 from django.conf import settings
 
+from constants import ProjectPaths
 from monitoring_app.models import Cluster, RefPath, Method
-from monitoring_app.utilities import _gen_dict_extract, _get_schema_only
+from monitoring_app.utilities import _gen_dict_extract, _get_schema_only, _get_schemas_only
 
 VERBOSE_LOGGER = logging.getLogger("mid-verbose")
 LOGGER = logging.getLogger("root")
@@ -18,35 +19,39 @@ LOGGER = logging.getLogger("root")
 JAR_FILE_PATH = os.path.join(str(os.getcwd()).split("/loadbalancer")[0], "openapi-generator-cli.jar")
 
 
-def create_server_stubs(source_config_file, project_directory, **kwargs):
-    config_files = _get_templates(source_config_file, project_directory)
+def create_server_stubs(source_config_file_path, project_directory, **kwargs):
+    new_config_files_path = os.path.join(project_directory, ProjectPaths.NEW_CONFIGS)
+    if not os.path.isdir(new_config_files_path):
+        os.makedirs(new_config_files_path)
+
+    new_template_paths = _get_templates(source_config_file_path, new_config_files_path)
+    for cl, wns in new_template_paths.items():
+        for wn, pods in wns.items():
+            for pod, single_container in pods.items():
+                for container_name, config in single_container.items():
+                    image_name = _create_server_stub(config["path"], project_directory, config["tag"] + "config", config["name"])
+                    config["image"] = image_name
     count = 1
 
     # removing all deployments that are made before
-    _delete_folder_content(kwargs.get("helm_chart_template_path"))
 
-    for config_file in config_files:
-        _create_server_stub(config_file, project_directory, count, **kwargs)
-        count += 1
+    # _delete_folder_content(kwargs.get("helm_chart_template_path"))
+    # helm_deployment_path = kwargs.get("helm_deployment_path")
 
-    config_name = str(source_config_file.split('/')[-1]).split('.')[0]
-
-    helm_deployment_path = kwargs.get("helm_deployment_path")
-    with ZipFile(os.path.join(helm_deployment_path, config_name), "w") as zip_obj:
-        helm_chart_path = kwargs.get("helm_chart_path")
-        for folder_name, sub_folder_name, file_names in os.walk(helm_chart_path):
-            for file_name in file_names:
-                file_path = os.path.join(folder_name, file_name)
-                zip_obj.write(file_path, basename(file_path))
-    subprocess.call(["helm", "upgrade", "open-api-app", kwargs.get("helm_chart_path")])
+    return new_template_paths
+    # with ZipFile(os.path.join(helm_deployment_path, config_name), "w") as zip_obj:
+    #     helm_chart_path = kwargs.get("helm_chart_path")
+    #     for folder_name, sub_folder_name, file_names in os.walk(helm_chart_path):
+    #         for file_name in file_names:
+    #             file_path = os.path.join(folder_name, file_name)
+    #             zip_obj.write(file_path, basename(file_path))
+    # subprocess.call(["helm", "upgrade", "open-api-app", kwargs.get("helm_chart_path")])
 
 
-def _create_server_stub(config_file, project_directory, count, **kwargs):
+def _create_server_stub(config_file, project_directory, config_tag, config_name):
     VERBOSE_LOGGER.info("creating server stub for provided template.")
-    # it will give the config name from whole filepath only i-e 07config
-    config_name = str(config_file.split('/')[-1]).split('.')[0]
 
-    output_directory = os.path.join(project_directory, "server-stubs", config_name)
+    output_directory = os.path.join(project_directory, "server-stubs", config_tag, config_name)
     subprocess.call(
         ["java", "-jar", JAR_FILE_PATH, "generate", "-i", config_file, "-g", "spring", "-o", output_directory])
 
@@ -68,21 +73,21 @@ ENTRYPOINT ["java","-jar","/app.jar"]""")
     subprocess.call(["docker", "build", "-t", docker_image_name, output_directory])
 
     # pushing the image to docker hub
-    subprocess.call(["docker", "push", docker_image_name])
+    # subprocess.call(["docker", "push", docker_image_name])
 
-    version = str(int(config_name.split("config")[0].split("_")[1]))
+    # version = str(int(config_name.split("config")[0].split("_")[1]))
 
-    helm_chart, helm_deployment = get_helm_chart(version, count, docker_image_name)
-    with(open(os.path.join(kwargs.get("helm_chart_path"), "Chart.yaml"), "w")) as chart_file:
-        LOGGER.info("writing Chart.YAML file")
-        chart_file.write(helm_chart)
-
-    with(open(os.path.join(
-            kwargs.get("helm_chart_template_path"), config_name.lower() + "deployment.yaml"
-    ), "w")) as deployment_file:
-        LOGGER.info("writing deployment.YAML file")
-        deployment_file.write(helm_deployment)
-
+    # helm_chart, helm_deployment = get_helm_chart(version, count, docker_image_name)
+    # with(open(os.path.join(kwargs.get("helm_chart_path"), "Chart.yaml"), "w")) as chart_file:
+    #     LOGGER.info("writing Chart.YAML file")
+    #     chart_file.write(helm_chart)
+    #
+    # with(open(os.path.join(
+    #         kwargs.get("helm_chart_template_path"), config_name.lower() + "deployment.yaml"
+    # ), "w")) as deployment_file:
+    #     LOGGER.info("writing deployment.YAML file")
+    #     deployment_file.write(helm_deployment)
+    return docker_image_name
 
 def _get_method_by_ref(ref_path, methods):
     for method in methods:
@@ -94,7 +99,7 @@ def _get_method_by_ref(ref_path, methods):
 def _get_templates(config_file, new_config_directory):
     VERBOSE_LOGGER.info("Started creating templates.")
 
-    file_tag = config_file.split("config.json")
+    file_tag = config_file.split('/')[-1].split('config.json')[0]
 
     with open(config_file, "r") as template_file:
         config_template = json.load(template_file)
@@ -102,7 +107,6 @@ def _get_templates(config_file, new_config_directory):
         name = next(iter(cluster_template))
         cluster = Cluster(name, 0, cluster_template[name], '#/info/x-clusters/' + name)
 
-        paths_template = config_template['paths']
         schemas_template = config_template['components']['schemas']
 
         methods = []
@@ -146,11 +150,21 @@ def _get_templates(config_file, new_config_directory):
 
             paths = {}
             schemas = {}
+            # getting all schemas which are referenced to the methods
             for method in config_container['methods']:
                 methods_config = paths.setdefault(method.path_name, {})
                 methods_config[method.method_name] = method.full_method
                 if method.schema_name != 'default':
                     schemas[method.schema_name] = schemas_template[method.schema_name]
+
+            # getting all those schemas which have ref to any schema of methods
+            referenced_schemas = {}
+            for name, schema in schemas.items():
+                all_references = list(set(_gen_dict_extract('$ref', schema)))
+                schema_names = _get_schemas_only(all_references)
+                for schema_name in schema_names:
+                    referenced_schemas[schema_name] = schemas_template[schema_name]
+            schemas.update(referenced_schemas)
 
             copied_template['paths'] = paths
             copied_template['components']['schemas'] = schemas
@@ -165,12 +179,16 @@ def _get_templates(config_file, new_config_directory):
             for wn, pods in wns.items():
                 for pod, single_container in pods.items():
                     for container_name, config in single_container.items():
-                        output_file_name = f"{file_tag}_{cl}_{wn}_{pod}_{container_name}.json"
+                        output_name = f"{file_tag}_{cl}_{wn}_{pod}_{container_name}"
+                        output_file_name = output_name + ".json"
                         output_file_path = os.path.join(new_config_directory, output_file_name)
-                        with open(output_file_path, "w") as output_file:
-                            json.dump(new_templates[0], output_file, indent=2)
 
-                        new_paths_template[cl][wn][pod][container_name] = output_file_path
+                        with open(output_file_path, "w") as output_file:
+                            json.dump(config, output_file, indent=2)
+
+                        new_paths_template[cl][wn][pod][container_name] = {"name": output_name,
+                                                                           "path": output_file_path,
+                                                                           "tag": file_tag}
 
         return new_paths_template
 
@@ -187,7 +205,6 @@ def _delete_folder_content(folder):
         except Exception as e:
             LOGGER.error('Failed to delete %s. Reason: %s' % (file_path, e))
             print('Failed to delete %s. Reason: %s' % (file_path, e))
-
 
 
 def get_helm_chart(version, count, image_name):

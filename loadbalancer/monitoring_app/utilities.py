@@ -24,6 +24,18 @@ def _get_schema_only(references):
     return saved_schema
 
 
+def _get_schemas_only(references):
+    saved_schemas = []
+    for reference in references:
+        schema = reference.split("#/components/schemas/")
+        try:
+            saved_schemas.append(schema[1])
+        except IndexError:
+            pass
+
+    return saved_schemas
+
+
 def _join_components(threshold, components):
     joined_components = []
     remaining_components = []
