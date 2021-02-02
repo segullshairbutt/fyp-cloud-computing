@@ -10,6 +10,7 @@ from zipfile import ZipFile
 from django.conf import settings
 
 from constants import ProjectPaths
+from deployment_generator.models import Node
 from deployment_generator.templates import get_deployment_template
 from monitoring_app.models import Cluster, RefPath, Method
 from monitoring_app.utilities import _gen_dict_extract, _get_schema_only, _get_schemas_only
@@ -66,6 +67,30 @@ def create_server_stubs(source_config_file_path, project_directory, **kwargs):
                 file_path = os.path.join(folder_name, file_name)
                 zip_obj.write(file_path, basename(file_path))
     # subprocess.call(["helm", "upgrade", "open-api-app", kwargs.get("helm_chart_path")])
+
+
+def create_kubernetes_nodes(worker_nodes):
+    difference = abs(Node.objects.count() - len(worker_nodes))
+
+    # here we are making the equal number of nodes which are required
+    for a in range(difference):
+        # subprocess.call(["minikube", "node", "add"])
+        latest_node = Node.objects.last()
+        new_node = Node()
+        if latest_node:
+            new_node.number = latest_node.number + 1
+        else:
+            new_node.number = 2
+
+        new_node.name = "minikube-m0" + str(new_node.number)
+        new_node.save()
+
+    # as number of worker_nodes and saved nodes is same so we have can iterate over both arrays
+    for index in range(len(worker_nodes)):
+        worker_node = worker_nodes[index]
+        node = Node.objects.all()[index]
+        # here we will label the nodes with their names
+        print(worker_node, node.name)
 
 
 def _create_server_stub(config_file, project_directory, config_tag, config_name):
