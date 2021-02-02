@@ -10,6 +10,7 @@ from zipfile import ZipFile
 from django.conf import settings
 
 from constants import ProjectPaths
+from deployment_generator.templates import get_deployment_template
 from monitoring_app.models import Cluster, RefPath, Method
 from monitoring_app.utilities import _gen_dict_extract, _get_schema_only, _get_schemas_only
 
@@ -20,31 +21,50 @@ JAR_FILE_PATH = os.path.join(str(os.getcwd()).split("/loadbalancer")[0], "openap
 
 
 def create_server_stubs(source_config_file_path, project_directory, **kwargs):
+    VERBOSE_LOGGER.info("Creating server stubs started.")
+
     new_config_files_path = os.path.join(project_directory, ProjectPaths.NEW_CONFIGS)
     if not os.path.isdir(new_config_files_path):
         os.makedirs(new_config_files_path)
 
     new_template_paths = _get_templates(source_config_file_path, new_config_files_path)
+
+    config_tag = None
     for cl, wns in new_template_paths.items():
         for wn, pods in wns.items():
             for pod, single_container in pods.items():
                 for container_name, config in single_container.items():
-                    image_name = _create_server_stub(config["path"], project_directory, config["tag"] + "config", config["name"])
+                    image_name = _create_server_stub(config["path"], project_directory, config["tag"] + "config",
+                                                     config["name"])
                     config["image"] = image_name
-    count = 1
+                    config_tag = config["tag"]
+
+    templates = ""
+    for cl_name, cluster in new_template_paths.items():
+        count = 0
+        for wn_name, pods in cluster.items():
+            count += 1
+            for pod_name, containers in pods.items():
+                containers = list(containers.values())
+                if containers:
+                    templates = templates + get_deployment_template(containers, wn_name, count) + "\n"
 
     # removing all deployments that are made before
 
-    # _delete_folder_content(kwargs.get("helm_chart_template_path"))
-    # helm_deployment_path = kwargs.get("helm_deployment_path")
+    helm_chart_template_path = os.path.join(project_directory, ProjectPaths.HELM_CHARTS, ProjectPaths.TEMPLATES)
+    _delete_folder_content(helm_chart_template_path)
 
-    return new_template_paths
-    # with ZipFile(os.path.join(helm_deployment_path, config_name), "w") as zip_obj:
-    #     helm_chart_path = kwargs.get("helm_chart_path")
-    #     for folder_name, sub_folder_name, file_names in os.walk(helm_chart_path):
-    #         for file_name in file_names:
-    #             file_path = os.path.join(folder_name, file_name)
-    #             zip_obj.write(file_path, basename(file_path))
+    with open(os.path.join(helm_chart_template_path, "All Deployments.yaml"), "w") as output_file:
+        output_file.write(templates)
+    helm_deployment_path = os.path.join(project_directory, ProjectPaths.HELM_DEPLOYMENTS)
+
+    helm_chart_path = os.path.join(project_directory, ProjectPaths.HELM_CHARTS)
+    with ZipFile(os.path.join(helm_deployment_path, str(config_tag)+"config"), "w") as zip_obj:
+        LOGGER.info("Creating zip file for Helm Chart and Templates.")
+        for folder_name, sub_folder_name, file_names in os.walk(helm_chart_path):
+            for file_name in file_names:
+                file_path = os.path.join(folder_name, file_name)
+                zip_obj.write(file_path, basename(file_path))
     # subprocess.call(["helm", "upgrade", "open-api-app", kwargs.get("helm_chart_path")])
 
 
@@ -70,24 +90,12 @@ ENTRYPOINT ["java","-jar","/app.jar"]""")
 
     # building the docker image withe created file.
     docker_image_name = settings.DOCKER_IMAGE_NAME + f":{config_name.lower()}_image"
-    subprocess.call(["docker", "build", "-t", docker_image_name, output_directory])
+    # subprocess.call(["docker", "build", "-t", docker_image_name, output_directory])
 
     # pushing the image to docker hub
     # subprocess.call(["docker", "push", docker_image_name])
-
-    # version = str(int(config_name.split("config")[0].split("_")[1]))
-
-    # helm_chart, helm_deployment = get_helm_chart(version, count, docker_image_name)
-    # with(open(os.path.join(kwargs.get("helm_chart_path"), "Chart.yaml"), "w")) as chart_file:
-    #     LOGGER.info("writing Chart.YAML file")
-    #     chart_file.write(helm_chart)
-    #
-    # with(open(os.path.join(
-    #         kwargs.get("helm_chart_template_path"), config_name.lower() + "deployment.yaml"
-    # ), "w")) as deployment_file:
-    #     LOGGER.info("writing deployment.YAML file")
-    #     deployment_file.write(helm_deployment)
     return docker_image_name
+
 
 def _get_method_by_ref(ref_path, methods):
     for method in methods:
@@ -188,7 +196,8 @@ def _get_templates(config_file, new_config_directory):
 
                         new_paths_template[cl][wn][pod][container_name] = {"name": output_name,
                                                                            "path": output_file_path,
-                                                                           "tag": file_tag}
+                                                                           "tag": file_tag
+                                                                           }
 
         return new_paths_template
 
@@ -205,48 +214,3 @@ def _delete_folder_content(folder):
         except Exception as e:
             LOGGER.error('Failed to delete %s. Reason: %s' % (file_path, e))
             print('Failed to delete %s. Reason: %s' % (file_path, e))
-
-
-def get_helm_chart(version, count, image_name):
-    deployment_file = f"""---
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: open-api-app-v-{version}-{str(count)}
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: open-api-app-v-{version}-{str(count)}
-  template:
-    metadata:
-      labels:
-        app: open-api-app-v-{version}-{str(count)}
-    spec:
-      containers:
-        - name: app
-          image: {image_name}
-          ports:
-            - containerPort: 8080          
-          imagePullPolicy: IfNotPresent
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: open-api-app-v-{version}-{str(count)}
-spec:
-  selector:
-    app: open-api-app-v-{version}-{str(count)}
-  ports:
-    - port: 8081
-      targetPort: 8080          
-  type: LoadBalancer"""
-
-    chart_file = f"""apiVersion: v2 #mandatory
-name: open-api-chart #mandatory
-description: A Helm chart for Kubernetes
-type: application
-version: 0.1.0 #mandatory
-appVersion: 1.{version}.{str(count)}"""
-
-    return chart_file, deployment_file

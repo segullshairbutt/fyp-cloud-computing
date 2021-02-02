@@ -27,9 +27,7 @@ def create_project(project_name):
     project.docker_image_name = 'segullshairbutt/website:' + project_name
     project.kubernetes_deployment_name = 'deployement_' + project_name
 
-    os.mkdir(project.docker_deployment_path)
     os.mkdir(project.config_data_path)
-    os.mkdir(project.yaml_deployment_path)
     os.mkdir(project.helm_deployment_path)
     os.makedirs(project.helm_chart_templates_path)
 

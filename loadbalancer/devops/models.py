@@ -4,6 +4,8 @@ from jsonfield import JSONField
 from django.db import models
 from django.contrib.auth.models import User
 
+from constants import ProjectPaths
+
 
 class Github(models.Model):
     url = models.URLField(primary_key=True, blank=False, null=False)
@@ -59,24 +61,16 @@ class Project(models.Model):
         return os.path.join(self.directory, "DOCKERFILE")
 
     @property
-    def docker_deployment_path(self):
-        return os.path.join(self.directory, "docker_deployments")
-
-    @property
-    def yaml_deployment_path(self):
-        return os.path.join(self.directory, "yaml_deployments")
-
-    @property
     def helm_chart_path(self):
-        return os.path.join(self.directory, "helm_charts")
+        return os.path.join(self.directory, ProjectPaths.HELM_CHARTS)
 
     @property
     def helm_chart_templates_path(self):
-        return os.path.join(self.directory, "helm_charts", "templates")
+        return os.path.join(self.directory, ProjectPaths.HELM_CHARTS, ProjectPaths.TEMPLATES)
 
     @property
     def helm_deployment_path(self):
-        return os.path.join(self.directory, "helm_deployments")
+        return os.path.join(self.directory, ProjectPaths.HELM_DEPLOYMENTS)
 
 
 class Path(models.Model):
