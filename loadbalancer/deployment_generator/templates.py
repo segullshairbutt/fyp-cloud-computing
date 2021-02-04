@@ -50,5 +50,5 @@ spec:
 
 def get_containers(name, image_name):
     VERBOSE_LOGGER.info(f"Started getting containers config for ${name}.")
-    return f"""      - name: {name}
+    return f"""      - name: {name.replace("_", "-")}
         image: {image_name}"""

@@ -21,7 +21,7 @@ LOGGER = logging.getLogger("root")
 JAR_FILE_PATH = os.path.join(str(os.getcwd()).split("/loadbalancer")[0], "openapi-generator-cli.jar")
 
 
-def create_server_stubs(source_config_file_path, project_directory, **kwargs):
+def create_server_stubs(source_config_file_path, project_directory):
     VERBOSE_LOGGER.info("Creating server stubs started.")
 
     new_config_files_path = os.path.join(project_directory, ProjectPaths.NEW_CONFIGS)
@@ -66,7 +66,9 @@ def create_server_stubs(source_config_file_path, project_directory, **kwargs):
             for file_name in file_names:
                 file_path = os.path.join(folder_name, file_name)
                 zip_obj.write(file_path, basename(file_path))
-    # subprocess.call(["helm", "upgrade", "open-api-app", kwargs.get("helm_chart_path")])
+
+    create_kubernetes_nodes(list(new_template_paths[next(iter(new_template_paths))].keys()))
+    subprocess.call(["helm", "upgrade", "open-api-app", helm_chart_path])
 
 
 def create_kubernetes_nodes(worker_nodes):
@@ -74,7 +76,7 @@ def create_kubernetes_nodes(worker_nodes):
 
     # here we are making the equal number of nodes which are required
     for a in range(difference):
-        # subprocess.call(["minikube", "node", "add"])
+        subprocess.call(["minikube", "node", "add"])
         latest_node = Node.objects.last()
         new_node = Node()
         if latest_node:
@@ -89,6 +91,7 @@ def create_kubernetes_nodes(worker_nodes):
     for index in range(len(worker_nodes)):
         worker_node = worker_nodes[index]
         node = Node.objects.all()[index]
+        subprocess.call(["kubectl", "label", "nodes", node.name, "name=" + worker_node, "--overwrite"])
         # here we will label the nodes with their names
         print(worker_node, node.name)
 
@@ -115,10 +118,10 @@ ENTRYPOINT ["java","-jar","/app.jar"]""")
 
     # building the docker image withe created file.
     docker_image_name = settings.DOCKER_IMAGE_NAME + f":{config_name.lower()}_image"
-    # subprocess.call(["docker", "build", "-t", docker_image_name, output_directory])
+    subprocess.call(["docker", "build", "-t", docker_image_name, output_directory])
 
     # pushing the image to docker hub
-    # subprocess.call(["docker", "push", docker_image_name])
+    subprocess.call(["docker", "push", docker_image_name])
     return docker_image_name
 
 
