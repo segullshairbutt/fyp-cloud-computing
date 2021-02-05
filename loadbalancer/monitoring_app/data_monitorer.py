@@ -7,7 +7,7 @@ import monitoring_app.data_generator as data_generator
 import monitoring_app.templates.config_templates as config_templates
 from deployment_generator import utilities
 from monitoring_app.constants import MAX_WN_LOAD, MAX_POD_LOAD, DEFAULT_SCHEMA_NAME, CL_LEVEL, WN_LEVEL, POD_LEVEL, \
-    SCHEMA_LEVEL
+    SCHEMA_LEVEL, MIN_WN_LOAD, MIN_POD_LOAD
 from monitoring_app.models import Cluster, ContainerGroup, MethodGroup, PodGroup, RefPath, Method, Container
 from monitoring_app.utilities import _join_components, _gen_dict_extract, _get_schema_only
 
@@ -165,7 +165,7 @@ def data_monitor(project):
         data_generator.generate_data(config_dir_path, configfile, datafile)
 
         # creating the server side code
-        utilities.create_server_stubs(os.path.join(project.config_data_path, configfile),project.directory)
+        # utilities.create_server_stubs(os.path.join(project.config_data_path, configfile),project.directory)
 
     for run in range(1):
         latest_filetag = str(_get_latest_filetag(config_dir_path))
@@ -212,8 +212,8 @@ def data_monitor(project):
             data_generator.generate_data(config_dir_path, new_config_file, new_data_file)
 
             # creating the server side code
-            utilities.create_server_stubs(
-                os.path.join(project.config_data_path, new_config_file), project.directory)
+            # utilities.create_server_stubs(
+            #     os.path.join(project.config_data_path, new_config_file), project.directory)
 
             """create docker files according to how many containers we need in new config
             we are passing prev_files_tags here because at last 2 function that we call above
@@ -349,11 +349,11 @@ def _get_scalable_components(clusters):
     scalable_pods = []
     for cluster in clusters:
         for worker_node in cluster.worker_nodes:
-            if worker_node.load < MAX_WN_LOAD:
+            if MIN_WN_LOAD < worker_node.load < MAX_WN_LOAD:
                 print("no need to scale ", str(worker_node))
 
                 for wn_pod in worker_node.pods:
-                    if wn_pod.load < MAX_POD_LOAD:
+                    if MIN_POD_LOAD < wn_pod.load < MAX_POD_LOAD:
                         print("no need to scale", str(wn_pod))
                     else:
                         print(wn_pod, " need scaling.")

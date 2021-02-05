@@ -1,5 +1,7 @@
 MAX_WN_LOAD = 50
+MIN_WN_LOAD = 20
 MAX_POD_LOAD = 50
+MIN_POD_LOAD = 30
 DEFAULT_SCHEMA_NAME = 'default'
 POD_LEVEL = "pod"
 CL_LEVEL = "cluster"
