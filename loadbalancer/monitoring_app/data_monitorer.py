@@ -233,7 +233,7 @@ def _monitor_scaling(config_data, config_path):
         # converting provided data to objects
         clusters, methods = _derive_components(single_data_object)
 
-        scalable_wns, scalable_pods = _get_scalable_components(clusters)
+        scalable_wns, scalable_pods = _get_scalable_components(clusters, methods)
 
         # monitoring based on pods
         _monitor_pods(_get_container_groups(scalable_pods), methods, copied_template)
@@ -344,16 +344,19 @@ def _derive_components(single_data_obj):
     return clusters, methods
 
 
-def _get_scalable_components(clusters):
+def _get_scalable_components(clusters, methods):
     scalable_wns = []
     scalable_pods = []
     for cluster in clusters:
+        _adjust_and_merge_wns(cluster.worker_nodes, methods, cluster.full_component[RefPath.WORKER_NODES])
+
         for worker_node in cluster.worker_nodes:
-            if MIN_WN_LOAD < worker_node.load < MAX_WN_LOAD:
+            if worker_node.load < MAX_WN_LOAD:
                 print("no need to scale ", str(worker_node))
 
+                _adjust_and_merge_pods(worker_node.pods, methods, worker_node.full_component[RefPath.PODS])
                 for wn_pod in worker_node.pods:
-                    if MIN_POD_LOAD < wn_pod.load < MAX_POD_LOAD:
+                    if wn_pod.load < MAX_POD_LOAD:
                         print("no need to scale", str(wn_pod))
                     else:
                         print(wn_pod, " need scaling.")
@@ -362,6 +365,83 @@ def _get_scalable_components(clusters):
                 print(worker_node, " need scaling.")
                 scalable_wns.append(worker_node)
     return scalable_wns, scalable_pods
+
+
+def _adjust_and_merge_pods(scalable_pods, methods, all_pods):
+    min_load_pods = []
+
+    #     if there is only one pod it will return as it is
+    if len(scalable_pods) < 2:
+        LOGGER.info("Number of pods is less than 2.")
+        return scalable_pods
+
+    #     creating a new list so that we can modify the original one
+    for pod in list(scalable_pods):
+        if pod.load <= MIN_POD_LOAD:
+            min_load_pods.append(pod)
+            scalable_pods.remove(pod)
+            all_pods.pop(pod.name)
+
+    LOGGER.info("Replacing Pod from RefPath of methods.")
+    first_pod = scalable_pods[0]
+    for pod in min_load_pods:
+        first_pod.full_component['metrics']['load'] += pod.load
+
+        for container in pod.containers:
+
+            container_methods = filter(lambda method: method.ref_path.full_path == container.ref_path, methods)
+            first_pod_containers = first_pod.full_component[RefPath.CONTAINERS]
+            new_container_name = "c" + str(len(first_pod_containers) + 1)
+            first_pod_containers[new_container_name] = container.full_component
+
+            # don't forget to chage the id of container
+            first_pod_containers[new_container_name]['id'] = new_container_name
+
+            for container_method in container_methods:
+                print("Changed from:", container_method.ref_path.full_path)
+
+                # getting ref_path of first container in first selected pod
+
+                container_method.ref_path = RefPath(first_pod.containers[0].ref_path)
+                container_method.ref_path.container_name = new_container_name
+
+                print("To:", container_method.ref_path.full_path)
+
+
+def _adjust_and_merge_wns(wns, methods, all_nodes):
+    min_load_wns = []
+
+    # If there is only one worker-node it will return as it is
+    if len(wns) < 2:
+        LOGGER.info("Worker-nodes are less than 2.")
+        return wns
+
+    # Creating a new list so that we can modify the original one
+    for wn in list(wns):
+        if wn.load <= MIN_WN_LOAD:
+            min_load_wns.append(wn)
+            wns.remove(wn)
+            all_nodes.pop(wn.name)
+
+    LOGGER.info("Replacing Worker-Node from RefPath of methods.")
+    first_wn = wns[0]
+    for wn in min_load_wns:
+        first_wn.full_component['metrics']['load'] += wn.load
+
+        for pod in wn.pods:
+            first_wn_pods = first_wn.full_component[RefPath.PODS]
+            new_pod_name = "pod" + str((len(first_wn_pods) + 1))
+            first_wn_pods[new_pod_name] = pod.full_component
+            first_wn_pods[new_pod_name]['id'] = new_pod_name
+
+            for container in pod.containers:
+                filtered_methods = filter(lambda method: method.ref_path.full_path == container.ref_path, methods)
+
+                for method in filtered_methods:
+                    print("Changed from:", method.ref_path.full_path)
+                    method.ref_path.pod_name = new_pod_name
+                    method.ref_path.worker_node = first_wn.name
+                    print("To:", method.ref_path.full_path)
 
 
 def _get_pod_groups(scalable_wns):

@@ -110,6 +110,46 @@
                 }
               }
             }
+          },
+          "wn2": {
+            "metrics": {
+              "load": 20
+            },
+            "name": "wn2",
+            "pods": {
+              "pod1": {
+                "name": "pod1",
+                "metrics": {
+                  "load": 51
+                },
+                "containers": {
+                  "c1": {
+                    "id": "c1",
+                    "metrics": {
+                      "load": 30
+                    }
+                  },
+                  "c2": {
+                    "id": "c2",
+                    "metrics": {
+                      "load": 27
+                    }
+                  },
+                  "c3": {
+                    "id": "c3",
+                    "metrics": {
+                      "load": 16
+                    }
+                  },
+                  "c4": {
+                    "id": "c4",
+                    "metrics": {
+                      "load": 13
+                    }
+                  }
+                }
+              }              
+            }
           }
         }
       }
@@ -212,7 +252,7 @@
             }
           ],
           "x-location": {
-            "$ref": "#/info/x-clusters/cl1/worker-nodes/wn1/pods/3/containers/c3"
+            "$ref": "#/info/x-clusters/cl1/worker-nodes/wn1/pods/pod3/containers/c3"
           },
           "x-metrics": {
             "load": 89
@@ -249,7 +289,7 @@
             }
           ],
           "x-location": {
-            "$ref": "#/info/x-clusters/cl1/worker-nodes/wn1/pods/pod1/containers/c3"
+            "$ref": "#/info/x-clusters/cl1/worker-nodes/wn2/pods/pod1/containers/c3"
           },
           "x-metrics": {
             "load": 68
@@ -275,7 +315,7 @@
             }
           ],
           "x-location": {
-            "$ref": "#/info/x-clusters/cl1/worker-nodes/wn1/pods/pod1/containers/c2"
+            "$ref": "#/info/x-clusters/cl1/worker-nodes/wn2/pods/pod1/containers/c2"
           },
           "x-metrics": {
             "load": 66
@@ -303,7 +343,7 @@
             }
           ],
           "x-location": {
-            "$ref": "#/info/x-clusters/cl1/worker-nodes/wn1/pods/pod1/containers/c2"
+            "$ref": "#/info/x-clusters/cl1/worker-nodes/wn2/pods/pod1/containers/c2"
           },
           "x-metrics": {
             "load": 21
