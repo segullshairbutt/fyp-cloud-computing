@@ -252,6 +252,23 @@ def _monitor_scaling(config_data, config_path):
     return None
 
 
+def _get_pod_groups(scalable_wns):
+    pod_groups = []
+    for wn in scalable_wns:
+        sum_of_pod_loads = sum(p.load for p in wn.pods)
+        pod_groups.append(PodGroup(wn.load, sum_of_pod_loads, wn.pods))
+    return pod_groups
+
+
+def _get_container_groups(scalable_pods):
+    container_groups = []
+    for scalable_pod in scalable_pods:
+        sum_of_container_loads = sum(c.load for c in scalable_pod.containers)
+        container_groups.append(
+            ContainerGroup(scalable_pod.load, sum_of_container_loads, scalable_pod.containers))
+    return container_groups
+
+
 def _adjust_schema_levels(template):
     VERBOSE_LOGGER.info("Adjusting the storage level of schemas.")
 
@@ -292,8 +309,6 @@ def _adjust_schema_levels(template):
     for schema_name, level in final_schema_levels.items():
         if schema_name in config_schemas.keys():
             config_schemas[schema_name][SCHEMA_LEVEL] = level
-
-    return template
 
 
 def _get_wn(wn_name):
@@ -444,25 +459,8 @@ def _adjust_and_merge_wns(wns, methods, all_nodes):
                     print("To:", method.ref_path.full_path)
 
 
-def _get_pod_groups(scalable_wns):
-    pod_groups = []
-    for wn in scalable_wns:
-        sum_of_pod_loads = sum(p.load for p in wn.pods)
-        pod_groups.append(PodGroup(wn.load, sum_of_pod_loads, wn.pods))
-    return pod_groups
-
-
-def _get_container_groups(scalable_pods):
-    container_groups = []
-    for scalable_pod in scalable_pods:
-        sum_of_container_loads = sum(c.load for c in scalable_pod.containers)
-        container_groups.append(
-            ContainerGroup(scalable_pod.load, sum_of_container_loads, scalable_pod.containers))
-    return container_groups
-
-
 def _monitor_worker_nodes(pod_groups, methods, cluster, copied_template):
-    VERBOSE_LOGGER.info("entered into _monitor_worker_nodes")
+    VERBOSE_LOGGER.info("Entered into _monitor_worker_nodes")
     for group in pod_groups:
         LOGGER.info("Iterating into pod groups.")
         cluster_template = copied_template[RefPath.INFO][RefPath.X_CLUSTERS][cluster.name][RefPath.WORKER_NODES]
@@ -643,7 +641,5 @@ def _monitor_pods(container_groups, methods, copied_template):
                     delete_able_containers.add(
                         RefPath(current_ref_path.cluster, current_ref_path.worker_node, current_ref_path.pod_name,
                                 r_container.name))
-
-            print(delete_able_containers)
 
             config_pods[pod_name] = new_pod
