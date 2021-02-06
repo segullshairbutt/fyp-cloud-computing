@@ -70,6 +70,20 @@
                     }
                   }
                 }
+              },
+              "pod3": {
+                "name": "pod3",
+                "metrics": {
+                  "load": ""
+                },
+                "containers": {
+                  "c1": {
+                    "name": "c1",
+                    "metrics": {
+                      "load": ""
+                    }
+                  }
+                }
               }
             }
           },
@@ -81,6 +95,20 @@
             "pods": {
               "pod1": {
                 "name": "pod1",
+                "metrics": {
+                  "load": ""
+                },
+                "containers": {
+                  "c1": {
+                    "name": "c1",
+                    "metrics": {
+                      "load": ""
+                    }
+                  }
+                }
+              },
+              "pod2": {
+                "name": "pod2",
                 "metrics": {
                   "load": ""
                 },
@@ -130,9 +158,7 @@
   "paths": {
     "/pets": {
       "post": {
-        "tags": [
-          "pet"
-        ],
+        "tags": [ "pet" ],
         "summary": "Add a new pet to the store",
         "description": "",
         "requestBody": {
@@ -153,23 +179,18 @@
         },
         "security": [
           {
-            "petstore_auth": [
-              "write:pets",
-              "read:pets"
-            ]
+            "petstore_auth": [ "write:pets", "read:pets" ]
           }
         ],
         "x-location": {
-          "$ref": "#/info/x-clusters/cl1/worker-nodes/wn2/pods/pod1/containers/c1"
+          "$ref": "#/info/x-clusters/cl1/worker-nodes/wn1/pods/pod3/containers/c1"
         },
         "x-metrics": {
           "load": ""
         }
       },
       "put": {
-        "tags": [
-          "pet"
-        ],
+        "tags": [ "pet" ],
         "summary": "Add a new pet to the store",
         "description": "",
         "requestBody": {
@@ -190,10 +211,7 @@
         },
         "security": [
           {
-            "petstore_auth": [
-              "write:pets",
-              "read:pets"
-            ]
+            "petstore_auth": [ "write:pets", "read:pets" ]
           }
         ],
         "x-location": {
@@ -204,9 +222,7 @@
         }
       },
       "get": {
-        "tags": [
-          "pet"
-        ],
+        "tags": [ "pet" ],
         "summary": "Add a new pet to the store",
         "description": "",
         "responses": {
@@ -216,10 +232,7 @@
         },
         "security": [
           {
-            "petstore_auth": [
-              "write:pets",
-              "read:pets"
-            ]
+            "petstore_auth": [ "write:pets", "read:pets" ]
           }
         ],
         "x-location": {
@@ -232,9 +245,7 @@
     },
     "/users": {
       "patch": {
-        "tags": [
-          "pet"
-        ],
+        "tags": [ "pet" ],
         "summary": "Add a new pet to the store",
         "description": "",
         "requestBody": {
@@ -255,10 +266,7 @@
         },
         "security": [
           {
-            "petstore_auth": [
-              "write:pets",
-              "read:pets"
-            ]
+            "petstore_auth": [ "write:pets", "read:pets" ]
           }
         ],
         "x-location": {
@@ -269,9 +277,7 @@
         }
       },
       "pat": {
-        "tags": [
-          "pet"
-        ],
+        "tags": [ "pet" ],
         "summary": "Add a new pet to the store",
         "description": "",
         "requestBody": {
@@ -292,23 +298,18 @@
         },
         "security": [
           {
-            "petstore_auth": [
-              "write:pets",
-              "read:pets"
-            ]
+            "petstore_auth": [ "write:pets", "read:pets" ]
           }
         ],
         "x-location": {
-          "$ref": "#/info/x-clusters/cl1/worker-nodes/wn1/pods/pod2/containers/c3"
+          "$ref": "#/info/x-clusters/cl1/worker-nodes/wn1/pods/pod3/containers/c3"
         },
         "x-metrics": {
           "load": ""
         }
       },
       "delete": {
-        "tags": [
-          "pet"
-        ],
+        "tags": [ "pet" ],
         "summary": "Add a new pet to the store",
         "description": "",
         "requestBody": {
@@ -329,10 +330,7 @@
         },
         "security": [
           {
-            "petstore_auth": [
-              "write:pets",
-              "read:pets"
-            ]
+            "petstore_auth": [ "write:pets", "read:pets" ]
           }
         ],
         "x-location": {
@@ -343,9 +341,7 @@
         }
       },
       "get": {
-        "tags": [
-          "pet"
-        ],
+        "tags": [ "pet" ],
         "summary": "Add a new pet to the store",
         "description": "",
         "responses": {
@@ -355,10 +351,7 @@
         },
         "security": [
           {
-            "petstore_auth": [
-              "write:pets",
-              "read:pets"
-            ]
+            "petstore_auth": [ "write:pets", "read:pets" ]
           }
         ],
         "x-location": {
@@ -371,9 +364,7 @@
     },
     "/orders": {
       "get": {
-        "tags": [
-          "pet"
-        ],
+        "tags": [ "pet" ],
         "summary": "Add a new pet to the store",
         "description": "",
         "responses": {
@@ -383,10 +374,7 @@
         },
         "security": [
           {
-            "petstore_auth": [
-              "write:pets",
-              "read:pets"
-            ]
+            "petstore_auth": [ "write:pets", "read:pets" ]
           }
         ],
         "x-location": {
@@ -397,9 +385,7 @@
         }
       },
       "patch": {
-        "tags": [
-          "pet"
-        ],
+        "tags": [ "pet" ],
         "summary": "Add a new pet to the store",
         "description": "",
         "requestBody": {
@@ -420,10 +406,7 @@
         },
         "security": [
           {
-            "petstore_auth": [
-              "write:pets",
-              "read:pets"
-            ]
+            "petstore_auth": [ "write:pets", "read:pets" ]
           }
         ],
         "x-location": {
@@ -480,11 +463,7 @@
           "status": {
             "type": "string",
             "description": "Order Status",
-            "enum": [
-              "placed",
-              "approved",
-              "delivered"
-            ]
+            "enum": [ "placed", "approved", "delivered" ]
           },
           "complete": {
             "type": "boolean",
@@ -566,10 +545,7 @@
       "Pet": {
         "x-storage-level": "pod",
         "type": "object",
-        "required": [
-          "name",
-          "photoUrls"
-        ],
+        "required": [ "name", "photoUrls" ],
         "properties": {
           "id": {
             "type": "integer",
@@ -605,11 +581,7 @@
           "status": {
             "type": "string",
             "description": "pet status in the store",
-            "enum": [
-              "available",
-              "pending",
-              "sold"
-            ]
+            "enum": [ "available", "pending", "sold" ]
           }
         },
         "xml": {

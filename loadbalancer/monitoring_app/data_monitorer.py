@@ -5,7 +5,6 @@ import os
 
 import monitoring_app.data_generator as data_generator
 import monitoring_app.templates.config_templates as config_templates
-from deployment_generator import utilities
 from monitoring_app.constants import MAX_WN_LOAD, MAX_POD_LOAD, DEFAULT_SCHEMA_NAME, CL_LEVEL, WN_LEVEL, POD_LEVEL, \
     SCHEMA_LEVEL, MIN_WN_LOAD, MIN_POD_LOAD
 from monitoring_app.models import Cluster, ContainerGroup, MethodGroup, PodGroup, RefPath, Method, Container
@@ -450,7 +449,7 @@ def _adjust_and_merge_wns(wns, methods, all_nodes):
             first_wn_pods[new_pod_name]['id'] = new_pod_name
 
             for container in pod.containers:
-                filtered_methods = filter(lambda method: method.ref_path.full_path == container.ref_path, methods)
+                filtered_methods = filter(lambda m: m.ref_path.full_path == container.ref_path, methods)
 
                 for method in filtered_methods:
                     print("Changed from:", method.ref_path.full_path)
