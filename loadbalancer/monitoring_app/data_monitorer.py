@@ -8,7 +8,8 @@ import monitoring_app.templates.config_templates as config_templates
 from monitoring_app.constants import MAX_WN_LOAD, MAX_POD_LOAD, DEFAULT_SCHEMA_NAME, CL_LEVEL, WN_LEVEL, POD_LEVEL, \
     SCHEMA_LEVEL, MIN_WN_LOAD, MIN_POD_LOAD
 from monitoring_app.models import Cluster, ContainerGroup, MethodGroup, PodGroup, RefPath, Method, Container
-from monitoring_app.utilities import _join_components, _gen_dict_extract, _get_schema_only
+from monitoring_app.utilities import _join_components, _gen_dict_extract, _get_schema_only, clean_template, \
+    reorder_template
 
 VERBOSE_LOGGER = logging.getLogger("mid-verbose")
 LOGGER = logging.getLogger("root")
@@ -244,6 +245,13 @@ def _monitor_scaling(config_data, config_path):
             print("no changes detected to template.")
         else:
             _adjust_schema_levels(copied_template)
+            # cleaning template
+            LOGGER.info("Cleaning template to remove all not-required components.")
+            clean_template(copied_template)
+            # reordering the template which is out of order now
+            LOGGER.info("Reordering the template.")
+            reorder_template(copied_template)
+
             LOGGER.info("Returning new template. ")
             return copied_template
 
@@ -329,7 +337,7 @@ def _get_pod(pod_name):
 
 def _get_container(container_name):
     return {
-        "name": container_name,
+        "id": container_name,
         "metrics": {
             "load": ""
         }
@@ -571,7 +579,6 @@ def _monitor_worker_nodes(pod_groups, methods, cluster, copied_template):
 
 def _monitor_pods(container_groups, methods, copied_template):
     VERBOSE_LOGGER.info("entered in _monitor_pods")
-    delete_able_containers = set()
     # scaling based upon the pods
     for group in container_groups:
         LOGGER.info("iterating the container_groups")
@@ -626,19 +633,18 @@ def _monitor_pods(container_groups, methods, copied_template):
                 LOGGER.info("Remaining methods added into new container: " + method_path.container_name)
 
             current_container_counter = len(remaining_containers[1:])
+            print(remaining_containers)
             for r_container in remaining_containers:
-                current_container_counter += 1
-                # continuously incrementing the number of containers
-                container_name = "c" + str(current_container_counter)
-                new_pod["containers"][container_name] = r_container.full_component
+                if r_container.is_new:
+                    # it means that this container is new container and is to be added as it is.
+                    new_pod["containers"][r_container.name] = r_container.full_component
+                else:
+                    current_container_counter += 1
+                    # continuously incrementing the number of containers
+                    container_name = "c" + str(current_container_counter)
+                    r_container.full_component["id"] = container_name
+                    new_pod["containers"][container_name] = r_container.full_component
 
                 LOGGER.info("Remaining containers are inserted into new Pod: " + new_pod["name"])
-
-                # deleting the existing container which will be added to new pod later
-                if not r_container.is_new:
-                    LOGGER.info(str(r_container) + " added into deletable containers.")
-                    delete_able_containers.add(
-                        RefPath(current_ref_path.cluster, current_ref_path.worker_node, current_ref_path.pod_name,
-                                r_container.name))
 
             config_pods[pod_name] = new_pod

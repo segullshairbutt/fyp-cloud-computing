@@ -82,6 +82,12 @@
                     "metrics": {
                       "load": ""
                     }
+                  },
+                  "c2": {
+                    "name": "c2",
+                    "metrics": {
+                      "load": ""
+                    }
                   }
                 }
               }

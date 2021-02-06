@@ -80,9 +80,8 @@ def _derive_template_components(template):
 
 
 def clean_template(template):
-    copied_template = copy.deepcopy(template)
-    t_clusters, t_methods = _derive_template_components(copied_template)
-    clusters_template = copied_template[RefPath.INFO][RefPath.X_CLUSTERS]
+    t_clusters, t_methods = _derive_template_components(template)
+    clusters_template = template[RefPath.INFO][RefPath.X_CLUSTERS]
 
     for cluster in t_clusters:
         for worker_node in cluster.worker_nodes:
@@ -91,7 +90,7 @@ def clean_template(template):
             if not filtered_wn_methods:
                 print("Deleting worker node:", worker_node.ref_path)
                 del clusters_template[cluster.name][RefPath.WORKER_NODES][worker_node.name]
-                continue
+                # continue
             for pod in worker_node.pods:
                 filtered_pod_methods = list(filter(
                     lambda method: method.ref_path.worker_node == worker_node.name and
@@ -99,14 +98,124 @@ def clean_template(template):
                 if not filtered_pod_methods:
                     print("Deleting pod:", pod.ref_path)
                     del clusters_template[cluster.name][RefPath.WORKER_NODES][worker_node.name][RefPath.PODS][pod.name]
-                    continue
+                    # continue
                 for container in pod.containers:
                     filtered_container_methods = list(filter(
-                        lambda method: method.ref_path.worker_node == worker_node.name
-                                       and method.ref_path.pod_name == pod.name and
-                                       method.ref_path.container_name == container.name, t_methods)
-                    )
+                        lambda method: method.ref_path.worker_node == worker_node.name and method.ref_path.pod_name == pod.name and method.ref_path.container_name == container.name,
+                                                             t_methods))
                     if not filtered_container_methods:
                         print("Deleting container:", container.ref_path)
                         del clusters_template[cluster.name][RefPath.WORKER_NODES][worker_node.name][RefPath.PODS][
                             pod.name][RefPath.CONTAINERS][container.name]
+
+
+def reorder_template(template):
+    c_template = copy.deepcopy(template)
+    # cc_template = copy.deepcopy(template)
+
+    c_clusters_template = c_template[RefPath.INFO][RefPath.X_CLUSTERS]
+    cc_clusters_template = template[RefPath.INFO][RefPath.X_CLUSTERS]
+
+    c_clusters, c_methods = _derive_template_components(c_template)
+
+    for r_cl in range(len(c_clusters)):
+        cl = c_clusters[r_cl]
+        cl_name = "cl" + str(r_cl + 1)
+        if cl.name == cl_name:
+            pass
+        else:
+            cl_value = c_clusters_template[cl.name]
+            cl_value['name'] = cl_name
+            cc_clusters_template[cl_name] = cl_value
+
+            cl_methods = filter(lambda m: m.ref_path.cluster == cl.name, c_methods)
+            for method in cl_methods:
+                print("Changed from:", method.ref_path.full_path)
+                method.ref_path.cluster = cl_name
+                method.full_method['x-location'][RefPath.REF] = method.ref_path.full_path
+                print("To:", method.ref_path.full_path)
+
+                template[RefPath.PATHS][method.path_name][method.method_name] = method.full_method
+
+            del c_clusters_template[cl.name]
+            cl.name = cl_name
+
+        for r_wn in range(len(cl.worker_nodes)):
+            wn = cl.worker_nodes[r_wn]
+            wn_name = "wn" + str(r_wn + 1)
+            if wn.name == wn_name:
+                pass
+            else:
+                wn_value = c_clusters_template[cl.name][RefPath.WORKER_NODES][wn.name]
+                wn_value['name'] = wn_name
+
+                cc_clusters_template[cl.name][RefPath.WORKER_NODES][wn.name] = wn.full_component
+
+                wn_methods = filter(
+                    lambda m: m.ref_path.cluster == cl.name and m.ref_path.worker_node == wn.name,
+                    c_methods)
+                for method in wn_methods:
+                    print("Changed from:", method.ref_path.full_path)
+                    method.ref_path.worker_node = wn_name
+                    method.full_method['x-location'][RefPath.REF] = method.ref_path.full_path
+                    print("To:", method.ref_path.full_path)
+
+                    template[RefPath.PATHS][method.path_name][method.method_name] = method.full_method
+
+                del c_clusters_template[cl.name][RefPath.WORKER_NODES][wn.name]
+                wn.name = wn_name
+
+            for r_pod in range(len(wn.pods)):
+                pod = wn.pods[r_pod]
+                pod_name = "pod" + str(r_pod + 1)
+
+                if pod.name == pod_name:
+                    pass
+                else:
+                    pod_value = c_clusters_template[cl.name][RefPath.WORKER_NODES][wn.name][RefPath.PODS][pod.name]
+                    pod_value['name'] = pod_name
+
+                    cc_clusters_template[cl.name][RefPath.WORKER_NODES][wn.name][RefPath.PODS][pod_name] = pod_value
+
+                    pod_methods = filter(lambda
+                                             m: m.ref_path.cluster == cl.name and m.ref_path.worker_node == wn.name and m.ref_path.pod_name == pod.name,
+                                         c_methods)
+                    for method in pod_methods:
+                        print("Changed from:", method.ref_path.full_path)
+                        method.ref_path.pod_name = pod_name
+                        method.full_method['x-location'][RefPath.REF] = method.ref_path.full_path
+                        print("To:", method.ref_path.full_path)
+
+                        template[RefPath.PATHS][method.path_name][method.method_name] = method.full_method
+
+                    del cc_clusters_template[cl.name][RefPath.WORKER_NODES][wn.name][RefPath.PODS][pod.name]
+                    pod.name = pod_name
+                for r_container in range(len(pod.containers)):
+                    container = pod.containers[r_container]
+                    container_name = "c" + str(r_container + 1)
+                    if container.name == container_name:
+                        pass
+                    else:
+                        container_value = c_clusters_template[cl.name][RefPath.WORKER_NODES][wn.name][
+                            RefPath.PODS][pod.name][RefPath.CONTAINERS][container.name]
+                        container_value['id'] = container_name
+
+                        cc_clusters_template[cl.name][RefPath.WORKER_NODES][wn.name][RefPath.PODS][pod.name][
+                            RefPath.CONTAINERS][container_name] = container_value
+
+                        containers_methods = filter(lambda m: m.ref_path.cluster == cl.name
+                                                              and m.ref_path.worker_node == wn.name
+                                                              and m.ref_path.pod_name == pod.name
+                                                              and m.ref_path.container_name == container.name,
+                                                    c_methods)
+                        for method in containers_methods:
+                            print("Changed from:", method.ref_path.full_path)
+                            method.ref_path.container_name = container_name
+                            method.full_method['x-location'][RefPath.REF] = method.ref_path.full_path
+                            print("To:", method.ref_path.full_path)
+
+                            template[RefPath.PATHS][method.path_name][method.method_name] = method.full_method
+
+                        del cc_clusters_template[cl.name][RefPath.WORKER_NODES][wn.name][RefPath.PODS][pod.name][
+                            RefPath.CONTAINERS][container.name]
+                        container.name = container_name
