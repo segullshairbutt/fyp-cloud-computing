@@ -5,6 +5,7 @@ import os
 
 import monitoring_app.data_generator as data_generator
 import monitoring_app.templates.config_templates as config_templates
+from deployment_generator import utilities
 from monitoring_app.constants import MAX_WN_LOAD, MAX_POD_LOAD, DEFAULT_SCHEMA_NAME, CL_LEVEL, WN_LEVEL, POD_LEVEL, \
     SCHEMA_LEVEL, MIN_WN_LOAD, MIN_POD_LOAD
 from monitoring_app.models import Cluster, ContainerGroup, MethodGroup, PodGroup, RefPath, Method, Container
@@ -165,7 +166,7 @@ def data_monitor(project):
         data_generator.generate_data(config_dir_path, configfile, datafile)
 
         # creating the server side code
-        # utilities.create_server_stubs(os.path.join(project.config_data_path, configfile),project.directory)
+        utilities.create_server_stubs(os.path.join(project.config_data_path, configfile),project.directory)
 
     for run in range(1):
         latest_filetag = str(_get_latest_filetag(config_dir_path))
@@ -193,11 +194,7 @@ def data_monitor(project):
         else:
             print('--------------------------')
             VERBOSE_LOGGER.info("changes detected, trying to create new configuration")
-            # how much containers we need for new template (config.json file)
-            LOGGER.info('Total pods: {}'.format(len(new_template[RefPath.INFO][RefPath.X_CLUSTERS])))
-
             print('--------------------------')
-            # generate stuff for new files
 
             # creating name for new configuration file
             new_config_file = str(_get_new_filetag(config_dir_path)) + 'config.json'
@@ -212,8 +209,8 @@ def data_monitor(project):
             data_generator.generate_data(config_dir_path, new_config_file, new_data_file)
 
             # creating the server side code
-            # utilities.create_server_stubs(
-            #     os.path.join(project.config_data_path, new_config_file), project.directory)
+            utilities.create_server_stubs(
+                os.path.join(project.config_data_path, new_config_file), project.directory)
 
             """create docker files according to how many containers we need in new config
             we are passing prev_files_tags here because at last 2 function that we call above
@@ -633,7 +630,6 @@ def _monitor_pods(container_groups, methods, copied_template):
                 LOGGER.info("Remaining methods added into new container: " + method_path.container_name)
 
             current_container_counter = len(remaining_containers[1:])
-            print(remaining_containers)
             for r_container in remaining_containers:
                 if r_container.is_new:
                     # it means that this container is new container and is to be added as it is.

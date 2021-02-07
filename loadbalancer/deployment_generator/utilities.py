@@ -51,7 +51,6 @@ def create_server_stubs(source_config_file_path, project_directory):
                     templates = templates + get_deployment_template(containers, wn_name, count) + "\n"
 
     # removing all deployments that are made before
-
     helm_chart_template_path = os.path.join(project_directory, ProjectPaths.HELM_CHARTS, ProjectPaths.TEMPLATES)
     _delete_folder_content(helm_chart_template_path)
 
@@ -60,7 +59,7 @@ def create_server_stubs(source_config_file_path, project_directory):
     helm_deployment_path = os.path.join(project_directory, ProjectPaths.HELM_DEPLOYMENTS)
 
     helm_chart_path = os.path.join(project_directory, ProjectPaths.HELM_CHARTS)
-    with ZipFile(os.path.join(helm_deployment_path, str(config_tag)+"config"), "w") as zip_obj:
+    with ZipFile(os.path.join(helm_deployment_path, str(config_tag) + "config"), "w") as zip_obj:
         LOGGER.info("Creating zip file for Helm Chart and Templates.")
         for folder_name, sub_folder_name, file_names in os.walk(helm_chart_path):
             for file_name in file_names:
@@ -72,20 +71,28 @@ def create_server_stubs(source_config_file_path, project_directory):
 
 
 def create_kubernetes_nodes(worker_nodes):
-    difference = abs(Node.objects.count() - len(worker_nodes))
+    difference = Node.objects.count() - len(worker_nodes)
 
     # here we are making the equal number of nodes which are required
-    for a in range(difference):
-        subprocess.call(["minikube", "node", "add"])
-        latest_node = Node.objects.last()
-        new_node = Node()
-        if latest_node:
-            new_node.number = latest_node.number + 1
-        else:
-            new_node.number = 2
+    if difference < 0:
+        # it means that we need more nodes
+        for a in range(abs(difference)):
+            subprocess.call(["minikube", "node", "add"])
+            latest_node = Node.objects.last()
+            new_node = Node()
+            if latest_node:
+                new_node.number = latest_node.number + 1
+            else:
+                new_node.number = 2
 
-        new_node.name = "minikube-m0" + str(new_node.number)
-        new_node.save()
+            new_node.name = "minikube-m0" + str(new_node.number)
+            new_node.save()
+    else:
+        # getting the latest node and deleting them n time.
+        for a in range(difference):
+            node = Node.objects.last()
+            subprocess.call(["minikube", "node", "delete", node.name])
+            node.delete()
 
     # as number of worker_nodes and saved nodes is same so we have can iterate over both arrays
     for index in range(len(worker_nodes)):
