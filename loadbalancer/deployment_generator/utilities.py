@@ -8,9 +8,10 @@ from os.path import basename
 from zipfile import ZipFile
 
 from django.conf import settings
+from django.db import transaction
 
 from constants import ProjectPaths
-from deployment_generator.models import Node
+from deployment_generator.models import Node, Image
 from deployment_generator.templates import get_deployment_template
 from monitoring_app.models import Cluster, RefPath, Method
 from monitoring_app.utilities import _gen_dict_extract, _get_schema_only, _get_schemas_only
@@ -21,7 +22,7 @@ LOGGER = logging.getLogger("root")
 JAR_FILE_PATH = os.path.join(str(os.getcwd()).split("/loadbalancer")[0], "openapi-generator-cli.jar")
 
 
-def create_server_stubs(source_config_file_path, project_directory):
+def create_server_stubs(project_id, source_config_file_path, project_directory, helm_chart_name):
     VERBOSE_LOGGER.info("Creating server stubs started.")
 
     new_config_files_path = os.path.join(project_directory, ProjectPaths.NEW_CONFIGS)
@@ -30,13 +31,19 @@ def create_server_stubs(source_config_file_path, project_directory):
 
     new_template_paths = _get_templates(source_config_file_path, new_config_files_path)
 
+    # making all images deployed already vanished so that they can be deleted after helm update
+    with transaction.atomic():
+        for image in Image.objects.all():
+            image.status = image.VANISH_ABLE
+            image.save()
+
     config_tag = None
     for cl, wns in new_template_paths.items():
         for wn, pods in wns.items():
             for pod, single_container in pods.items():
                 for container_name, config in single_container.items():
-                    image_name = _create_server_stub(config["path"], project_directory, config["tag"] + "config",
-                                                     config["name"])
+                    image_name = _create_server_stub(project_id, config["path"], project_directory,
+                                                     config["tag"] + "config", config["name"])
                     config["image"] = image_name
                     config_tag = config["tag"]
 
@@ -67,7 +74,12 @@ def create_server_stubs(source_config_file_path, project_directory):
                 zip_obj.write(file_path, basename(file_path))
 
     create_kubernetes_nodes(list(new_template_paths[next(iter(new_template_paths))].keys()))
-    subprocess.call(["helm", "upgrade", "open-api-app", helm_chart_path])
+
+    # pushing newly created images
+    push_new_images()
+    subprocess.call(["helm", "upgrade", helm_chart_name, helm_chart_path])
+    # vanishing the images which has been set to Vanish_able
+    vanish_images()
 
 
 def create_kubernetes_nodes(worker_nodes):
@@ -103,7 +115,7 @@ def create_kubernetes_nodes(worker_nodes):
         print(worker_node, node.name)
 
 
-def _create_server_stub(config_file, project_directory, config_tag, config_name):
+def _create_server_stub(project_id, config_file, project_directory, config_tag, config_name):
     VERBOSE_LOGGER.info("creating server stub for provided template.")
 
     output_directory = os.path.join(project_directory, "server-stubs", config_tag, config_name)
@@ -128,8 +140,24 @@ ENTRYPOINT ["java","-jar","/app.jar"]""")
     subprocess.call(["docker", "build", "-t", docker_image_name, output_directory])
 
     # pushing the image to docker hub
-    subprocess.call(["docker", "push", docker_image_name])
+    # subprocess.call(["docker", "push", docker_image_name])
+    Image.objects.create(name=docker_image_name, project_id=project_id)
     return docker_image_name
+
+
+def push_new_images():
+    for image in Image.objects.filter(status=Image.PENDING):
+        subprocess.call(["docker", "push", image.name])
+        image.status = image.PUSHED
+        image.save()
+        LOGGER.info(image.name + " has been pushed.")
+
+
+def vanish_images():
+    for image in Image.objects.filter(status=Image.VANISH_ABLE):
+        subprocess.call(["docker", "rmi", image.name])
+        image.delete()
+        LOGGER.info(image.name + " has been vanished.")
 
 
 def _get_method_by_ref(ref_path, methods):

@@ -23,9 +23,8 @@ def create_project(project_name):
 
     project = Project()
     project.name = project_name
+    project.username = USERNAME
     project.directory = project_directory
-    project.docker_image_name = 'segullshairbutt/website:' + project_name
-    project.kubernetes_deployment_name = 'deployement_' + project_name
 
     os.mkdir(project.config_data_path)
     os.mkdir(project.helm_deployment_path)
@@ -40,7 +39,7 @@ def create_project(project_name):
     version: 0.1.0 #mandatory
     appVersion: 1.0""")
     # installing the helm for first time
-    subprocess.call(["helm", "install", "open-api-app", project.helm_chart_path])
+    subprocess.call(["helm", "install", project.helm_chart_name, project.helm_chart_path])
 
     LOGGER.info("project directories created..")
     return project.save()

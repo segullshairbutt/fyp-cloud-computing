@@ -166,7 +166,10 @@ def data_monitor(project):
         data_generator.generate_data(config_dir_path, configfile, datafile)
 
         # creating the server side code
-        utilities.create_server_stubs(os.path.join(project.config_data_path, configfile),project.directory)
+        utilities.create_server_stubs(
+            project.id,
+            os.path.join(project.config_data_path, configfile),
+            project.directory, project.helm_chart_name)
 
     for run in range(1):
         latest_filetag = str(_get_latest_filetag(config_dir_path))
@@ -210,13 +213,8 @@ def data_monitor(project):
 
             # creating the server side code
             utilities.create_server_stubs(
-                os.path.join(project.config_data_path, new_config_file), project.directory)
-
-            """create docker files according to how many containers we need in new config
-            we are passing prev_files_tags here because at last 2 function that we call above
-            already created new files"""
-
-            # generate_deployment_files(config_and_metrics_generator.get_latest_filetag(config_dir_path), paths)
+                project.id, os.path.join(project.config_data_path, new_config_file),
+                project.directory, project.helm_chart_name)
 
 
 def _monitor_scaling(config_data, config_path):
