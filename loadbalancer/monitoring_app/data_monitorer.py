@@ -115,7 +115,8 @@ def data_monitor(project):
     # generating a new file if already doesn't exists
     if _get_total_files_length(config_dir_path) == 0:
         # generated_template = generate_configuration_template(end_points)
-        initial_template = config_templates.generate_configuration(project.path_urls.all())
+        initial_template = project.initial_config
+        # initial_template = config_templates.generate_configuration(project.path_urls.all())
         LOGGER.info("Generating initial files")
 
         # getting all methods from a fat container

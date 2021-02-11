@@ -11,6 +11,8 @@ class Project(models.Model):
     name = models.CharField(max_length=100)
     directory = models.CharField(max_length=500)
     username = models.CharField(max_length=100)
+    initial_config = JSONField()
+    worker_nodes = JSONField()
 
     @property
     def helm_chart_name(self):
