@@ -16,7 +16,7 @@ class Project(models.Model):
 
     @property
     def helm_chart_name(self):
-        return f"open-api-app-{self.username}-{self.name.replace('_', '-')}"
+        return f"oa3-{self.username}-{self.name.replace('_', '-')}"
 
     @property
     def config_data_path(self):

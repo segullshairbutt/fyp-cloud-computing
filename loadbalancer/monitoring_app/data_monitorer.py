@@ -4,13 +4,12 @@ import logging
 import os
 
 import monitoring_app.data_generator as data_generator
-import monitoring_app.templates.config_templates as config_templates
 from deployment_generator import utilities
 from monitoring_app.constants import MAX_WN_LOAD, MAX_POD_LOAD, DEFAULT_SCHEMA_NAME, CL_LEVEL, WN_LEVEL, POD_LEVEL, \
     SCHEMA_LEVEL, MIN_WN_LOAD, MIN_POD_LOAD
 from monitoring_app.models import Cluster, ContainerGroup, MethodGroup, PodGroup, RefPath, Method, Container
 from monitoring_app.utilities import _join_components, _gen_dict_extract, _get_schema_only, clean_template, \
-    reorder_template
+    reorder_template, get_latest_filetag
 
 VERBOSE_LOGGER = logging.getLogger("mid-verbose")
 LOGGER = logging.getLogger("root")
@@ -51,16 +50,6 @@ def _get_new_filetag(dir_path):
     if new_file_tag < 10:
         new_file_tag = str("0" + str(new_file_tag))
     return new_file_tag
-
-
-def _get_latest_filetag(dir_path):
-    """get the number of latest configuration file"""
-
-    dir_size = (len(os.listdir(dir_path)))
-    file_tag = int(dir_size / 2)
-    if file_tag < 10:
-        file_tag = str("0" + str(file_tag))
-    return file_tag
 
 
 def _generate_related_data(dir_path, config_file, data_file_name):
@@ -168,12 +157,13 @@ def data_monitor(project):
 
         # creating the server side code
         utilities.create_server_stubs(
+            f"{project.username}-{project.name}",
             project.id,
             os.path.join(project.config_data_path, configfile),
             project.directory, project.helm_chart_name)
 
     for run in range(1):
-        latest_filetag = str(_get_latest_filetag(config_dir_path))
+        latest_filetag = str(get_latest_filetag(config_dir_path))
         data_read_file = latest_filetag + 'data.json'
         data_read_path = os.path.join(config_dir_path, data_read_file)
         with open(data_read_path) as f:
@@ -189,8 +179,8 @@ def data_monitor(project):
         if not new_template:
             # no need to update the template just overwrite the new data to latest data.json file
             # add more objects to the latest data.json file
-            data_file = str(_get_latest_filetag(config_dir_path)) + 'data.json'
-            config_file = str(_get_latest_filetag(config_dir_path)) + 'config.json'
+            data_file = str(get_latest_filetag(config_dir_path)) + 'data.json'
+            config_file = str(get_latest_filetag(config_dir_path)) + 'config.json'
             _generate_related_data(config_dir_path, config_file, data_file)
 
             LOGGER.info("no changing in template no need to update the config file")
@@ -214,6 +204,7 @@ def data_monitor(project):
 
             # creating the server side code
             utilities.create_server_stubs(
+                f"{project.username}-{project.name}",
                 project.id, os.path.join(project.config_data_path, new_config_file),
                 project.directory, project.helm_chart_name)
 
@@ -221,7 +212,7 @@ def data_monitor(project):
 def _monitor_scaling(config_data, config_path):
     VERBOSE_LOGGER.info("Monitor the scaling of pods and containers.")
 
-    file_name = str(_get_latest_filetag(config_path)) + "config.json"
+    file_name = str(get_latest_filetag(config_path)) + "config.json"
     template = copy.deepcopy(_get_config_file(os.path.join(config_path, file_name)))
     copied_template = copy.deepcopy(template)
 

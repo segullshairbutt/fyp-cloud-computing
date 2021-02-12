@@ -1,4 +1,5 @@
 import copy
+import os
 
 from monitoring_app.models import Method, RefPath, Cluster
 
@@ -219,3 +220,13 @@ def reorder_template(template):
                         del cc_clusters_template[cl.name][RefPath.WORKER_NODES][wn.name][RefPath.PODS][pod.name][
                             RefPath.CONTAINERS][container.name]
                         container.name = container_name
+
+
+def get_latest_filetag(dir_path):
+    """get the number of latest configuration file"""
+
+    dir_size = (len(os.listdir(dir_path)))
+    file_tag = int(dir_size / 2)
+    if file_tag < 10:
+        file_tag = str("0" + str(file_tag))
+    return file_tag

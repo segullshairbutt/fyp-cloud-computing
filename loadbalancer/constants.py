@@ -3,3 +3,18 @@ class ProjectPaths:
     HELM_CHARTS = "helm_charts"
     HELM_DEPLOYMENTS = "helm_deployments"
     TEMPLATES = "templates"
+
+
+INITIAL = "#/info/x-clusters/"
+WORKER_NODES = "worker-nodes"
+PODS = "pods"
+CONTAINERS = "containers"
+COMPONENTS = "components"
+SCHEMAS = "schemas"
+INFO = "info"
+X_CLUSTERS = "x-clusters"
+X_METRICS = "x-metrics"
+X_STORAGE_LEVEL = "x-storage-level"
+X_LOCATION = "x-location"
+REF = "$ref"
+PATHS = "paths"

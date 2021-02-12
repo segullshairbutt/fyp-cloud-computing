@@ -1,9 +1,13 @@
+import shutil
 import subprocess
 import os
 import logging
 from random import choice
 
+from constants import X_CLUSTERS, PATHS, INFO, X_LOCATION, X_STORAGE_LEVEL, COMPONENTS, SCHEMAS, X_METRICS
+from deployment_generator.models import Image
 from devops import constants
+from devops.constants import CLUSTER_TEMPLATE
 from devops.models import Project, Path, Method
 from monitoring_app.data_monitorer import data_monitor
 
@@ -21,6 +25,15 @@ def create_project(project_name, initial_config, worker_nodes):
         os.makedirs(project_directory)
         LOGGER.info("project directory created..")
 
+    initial_config[INFO][X_CLUSTERS] = CLUSTER_TEMPLATE
+    for path_name, path in initial_config[PATHS].items():
+        for method_name, method in path.items():
+            method[X_METRICS] = {"load": ""}
+            method[X_LOCATION] = {"$ref": "#/info/x-clusters/cl1/worker-nodes/wn1/pods/pod1/containers/c1"}
+
+    for schema_name, schema in initial_config[COMPONENTS][SCHEMAS].items():
+        schema[X_STORAGE_LEVEL] = "pod"
+
     project = Project()
     project.initial_config = initial_config
     project.worker_nodes = worker_nodes
@@ -35,16 +48,17 @@ def create_project(project_name, initial_config, worker_nodes):
     with(open(os.path.join(project.helm_chart_path, "Chart.yaml"), "w")) as chart_file:
         LOGGER.info("writing Chart.YAML file")
         chart_file.write(f"""apiVersion: v2 #mandatory
-    name: open-api-chart #mandatory
-    description: A Helm chart for Kubernetes
-    type: application
-    version: 0.1.0 #mandatory
-    appVersion: 1.0""")
+name: open-api-chart #mandatory
+description: A Helm chart for Kubernetes
+type: application
+version: 0.1.0 #mandatory
+appVersion: 1.0""")
     # installing the helm for first time
     subprocess.call(["helm", "install", project.helm_chart_name, project.helm_chart_path])
 
     LOGGER.info("project directories created..")
-    return project.save()
+    project.save()
+    return project
 
 
 def create_endpoint_path(project_id, path_name, number_of_methods, schema_name):
@@ -60,6 +74,20 @@ def create_endpoint_path(project_id, path_name, number_of_methods, schema_name):
             method_template = constants.generate_method(schema_name)
         method = Method(path=path, name=name, extra_fields=method_template)
         method.save()
+
+
+def delete_project(project_id):
+    VERBOSE_LOGGER.info("Deleting a project started.")
+    project = Project.objects.get(id=project_id)
+
+    subprocess.call(["helm", "uninstall", project.helm_chart_name, project.helm_chart_path])
+    for image in Image.objects.filter(project_id=project_id):
+        subprocess.call(["docker", "rmi", image.name])
+        image.delete()
+        LOGGER.info(image.name + " has been deleted.")
+
+    shutil.rmtree(project.directory)
+    LOGGER.info("project deleted successfully.")
 
 
 def start_monitoring(project_id):

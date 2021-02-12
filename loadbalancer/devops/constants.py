@@ -66,3 +66,36 @@ GET_METHOD_TEMPLATE = {
         "load": ""
     }
 }
+
+CLUSTER_TEMPLATE = {
+    "cl1": {
+        "name": "cl1",
+        "metrics": {
+            "load": ""
+        },
+        "worker-nodes": {
+            "wn1": {
+                "metrics": {
+                    "load": ""
+                },
+                "name": "wn1",
+                "pods": {
+                    "pod1": {
+                        "name": "pod1",
+                        "metrics": {
+                            "load": ""
+                        },
+                        "containers": {
+                            "c1": {
+                                "id": "c1",
+                                "metrics": {
+                                    "load": ""
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

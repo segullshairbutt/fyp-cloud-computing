@@ -22,7 +22,7 @@ LOGGER = logging.getLogger("root")
 JAR_FILE_PATH = os.path.join(str(os.getcwd()).split("/loadbalancer")[0], "openapi-generator-cli.jar")
 
 
-def create_server_stubs(project_id, source_config_file_path, project_directory, helm_chart_name):
+def create_server_stubs(app_name, project_id, source_config_file_path, project_directory, helm_chart_name):
     VERBOSE_LOGGER.info("Creating server stubs started.")
 
     new_config_files_path = os.path.join(project_directory, ProjectPaths.NEW_CONFIGS)
@@ -33,7 +33,7 @@ def create_server_stubs(project_id, source_config_file_path, project_directory, 
 
     # making all images deployed already vanished so that they can be deleted after helm update
     with transaction.atomic():
-        for image in Image.objects.all():
+        for image in Image.objects.filter(project_id=project_id):
             image.status = image.VANISH_ABLE
             image.save()
 
@@ -55,7 +55,8 @@ def create_server_stubs(project_id, source_config_file_path, project_directory, 
             for pod_name, containers in pods.items():
                 containers = list(containers.values())
                 if containers:
-                    templates = templates + get_deployment_template(containers, wn_name, count) + "\n"
+                    templates = templates + get_deployment_template(
+                        app_name, containers, wn_name, count) + "\n"
 
     # removing all deployments that are made before
     helm_chart_template_path = os.path.join(project_directory, ProjectPaths.HELM_CHARTS, ProjectPaths.TEMPLATES)
@@ -76,10 +77,10 @@ def create_server_stubs(project_id, source_config_file_path, project_directory, 
     create_kubernetes_nodes(list(new_template_paths[next(iter(new_template_paths))].keys()))
 
     # pushing newly created images
-    push_new_images()
+    # push_new_images(project_id)
     subprocess.call(["helm", "upgrade", helm_chart_name, helm_chart_path])
     # vanishing the images which has been set to Vanish_able
-    vanish_images()
+    vanish_images(project_id)
 
 
 def create_kubernetes_nodes(worker_nodes):
@@ -145,16 +146,16 @@ ENTRYPOINT ["java","-jar","/app.jar"]""")
     return docker_image_name
 
 
-def push_new_images():
-    for image in Image.objects.filter(status=Image.PENDING):
+def push_new_images(project_id):
+    for image in Image.objects.filter(status=Image.PENDING, project_id=project_id):
         subprocess.call(["docker", "push", image.name])
         image.status = image.PUSHED
         image.save()
         LOGGER.info(image.name + " has been pushed.")
 
 
-def vanish_images():
-    for image in Image.objects.filter(status=Image.VANISH_ABLE):
+def vanish_images(project_id):
+    for image in Image.objects.filter(status=Image.VANISH_ABLE, project_id=project_id):
         subprocess.call(["docker", "rmi", image.name])
         image.delete()
         LOGGER.info(image.name + " has been vanished.")

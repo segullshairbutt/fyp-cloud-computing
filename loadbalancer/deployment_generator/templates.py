@@ -4,7 +4,7 @@ VERBOSE_LOGGER = logging.getLogger("mid-verbose")
 LOGGER = logging.getLogger("root")
 
 
-def get_deployment_template(containers_config, wn_name, count):
+def get_deployment_template(app_name, containers_config, wn_name, count):
     VERBOSE_LOGGER.info(f"Started getting deployment for {wn_name}-{str(count)}.")
     tag = containers_config[0]['tag']
 
@@ -17,18 +17,18 @@ def get_deployment_template(containers_config, wn_name, count):
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: config-{tag}-{count}-deployment
+  name: {app_name}-{tag}-{count}-deployment
   labels: 
-    app: config-{tag}-{count}
+    app: {app_name}-{tag}-{count}
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: config-{tag}-{count}
+      app: {app_name}-{tag}-{count}
   template:
     metadata:
       labels:
-        app: config-{tag}-{count}
+        app: {app_name}-{tag}-{count}
     spec:
       containers:
       {containers}
@@ -38,10 +38,10 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: config-{tag}-{count}-service
+  name: {app_name}-{tag}-{count}-service
 spec: 
   selector:
-    app: config-{tag}-{count}
+    app: {app_name}-{tag}-{count}
   ports:
     - protocol: TCP
       port: 27017
