@@ -11,8 +11,58 @@
     "license": {
       "name": "Apache 2.0",
       "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
+    },
+    "x-clusters": {
+      "cl1": {
+        "name": "cl1",
+        "metrics": {
+          "load": ""
+        },
+        "worker-nodes": {
+          "wn1": {
+            "metrics": {
+              "load": ""
+            },
+            "name": "wn1",
+            "pods": {
+              "pod1": {
+                "name": "pod1",
+                "metrics": {
+                  "load": ""
+                },
+                "containers": {
+                  "c1": {
+                    "id": "c1",
+                    "metrics": {
+                      "load": ""
+                    }
+                  },
+                  "c2": {
+                    "id": "c2",
+                    "metrics": {
+                      "load": ""
+                    }
+                  },
+                  "c3": {
+                    "id": "c3",
+                    "metrics": {
+                      "load": ""
+                    }
+                  },
+                  "c4": {
+                    "id": "c4",
+                    "metrics": {
+                      "load": ""
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
-   },
+  },
   "servers": [
     {
       "url": "https://petstore.swagger.io",
@@ -72,7 +122,13 @@
               "read:pets"
             ]
           }
-        ]
+        ],
+        "x-metrics": {
+          "load": ""
+        },
+        "x-location": {
+          "$ref": "#/info/x-clusters/cl1/worker-nodes/wn1/pods/pod1/containers/c1"
+        }
       },
       "put": {
         "tags": [
@@ -103,7 +159,13 @@
               "read:pets"
             ]
           }
-        ]
+        ],
+        "x-metrics": {
+          "load": ""
+        },
+        "x-location": {
+          "$ref": "#/info/x-clusters/cl1/worker-nodes/wn1/pods/pod1/containers/c1"
+        }
       },
       "get": {
         "tags": [
@@ -123,7 +185,13 @@
               "read:pets"
             ]
           }
-        ]
+        ],
+        "x-metrics": {
+          "load": ""
+        },
+        "x-location": {
+          "$ref": "#/info/x-clusters/cl1/worker-nodes/wn1/pods/pod1/containers/c2"
+        }
       },
       "delete": {
         "tags": [
@@ -143,7 +211,13 @@
               "read:pets"
             ]
           }
-        ]
+        ],
+        "x-metrics": {
+          "load": ""
+        },
+        "x-location": {
+          "$ref": "#/info/x-clusters/cl1/worker-nodes/wn1/pods/pod1/containers/c2"
+        }
       }
     },
     "/store": {
@@ -176,7 +250,13 @@
               "read:pets"
             ]
           }
-        ]
+        ],
+        "x-metrics": {
+          "load": ""
+        },
+        "x-location": {
+          "$ref": "#/info/x-clusters/cl1/worker-nodes/wn1/pods/pod1/containers/c3"
+        }
       },
       "put": {
         "tags": [
@@ -207,7 +287,13 @@
               "read:pets"
             ]
           }
-        ]
+        ],
+        "x-metrics": {
+          "load": ""
+        },
+        "x-location": {
+          "$ref": "#/info/x-clusters/cl1/worker-nodes/wn1/pods/pod1/containers/c3"
+        }
       },
       "get": {
         "tags": [
@@ -227,7 +313,13 @@
               "read:pets"
             ]
           }
-        ]
+        ],
+        "x-metrics": {
+          "load": ""
+        },
+        "x-location": {
+          "$ref": "#/info/x-clusters/cl1/worker-nodes/wn1/pods/pod1/containers/c2"
+        }
       },
       "delete": {
         "tags": [
@@ -247,7 +339,13 @@
               "read:pets"
             ]
           }
-        ]
+        ],
+        "x-metrics": {
+          "load": ""
+        },
+        "x-location": {
+          "$ref": "#/info/x-clusters/cl1/worker-nodes/wn1/pods/pod1/containers/c2"
+        }
       }
     },
     "/user": {
@@ -280,7 +378,13 @@
               "read:pets"
             ]
           }
-        ]
+        ],
+        "x-metrics": {
+          "load": ""
+        },
+        "x-location": {
+          "$ref": "#/info/x-clusters/cl1/worker-nodes/wn1/pods/pod1/containers/c4"
+        }
       },
       "put": {
         "tags": [
@@ -311,7 +415,13 @@
               "read:pets"
             ]
           }
-        ]
+        ],
+        "x-metrics": {
+          "load": ""
+        },
+        "x-location": {
+          "$ref": "#/info/x-clusters/cl1/worker-nodes/wn1/pods/pod1/containers/c4"
+        }
       },
       "get": {
         "tags": [
@@ -331,7 +441,13 @@
               "read:pets"
             ]
           }
-        ]
+        ],
+        "x-metrics": {
+          "load": ""
+        },
+        "x-location": {
+          "$ref": "#/info/x-clusters/cl1/worker-nodes/wn1/pods/pod1/containers/c2"
+        }
       },
       "delete": {
         "tags": [
@@ -351,7 +467,13 @@
               "read:pets"
             ]
           }
-        ]
+        ],
+        "x-metrics": {
+          "load": ""
+        },
+        "x-location": {
+          "$ref": "#/info/x-clusters/cl1/worker-nodes/wn1/pods/pod1/containers/c2"
+        }
       }
     }
   },
@@ -427,7 +549,8 @@
         },
         "xml": {
           "name": "Pet"
-        }
+        },
+        "x-storage-level": "pod"
       },
       "Store": {
         "type": "object",
@@ -454,10 +577,10 @@
         },
         "xml": {
           "name": "Store"
-        }
+        },
+        "x-storage-level": "pod"
       },
       "Tag": {
-        
         "type": "object",
         "properties": {
           "id": {
@@ -470,10 +593,10 @@
         },
         "xml": {
           "name": "Tag"
-        }
+        },
+        "x-storage-level": "pod"
       },
       "Category": {
-        
         "type": "object",
         "properties": {
           "id": {
@@ -486,10 +609,10 @@
         },
         "xml": {
           "name": "Category"
-        }
+        },
+        "x-storage-level": "pod"
       },
       "User": {
-        
         "type": "object",
         "properties": {
           "id": {
@@ -505,7 +628,8 @@
         },
         "xml": {
           "name": "User"
-        }
+        },
+        "x-storage-level": "pod"
       }
     }
   },
