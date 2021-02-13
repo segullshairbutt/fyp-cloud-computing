@@ -184,24 +184,21 @@ def _get_templates(config_file, new_config_directory):
 
         methods = []
         for path_name, path in config_template['paths'].items():
-            for method_name, referenced_methods in path.items():
-                ref_path = RefPath(referenced_methods[RefPath.X_LOCATION][RefPath.REF])
-                all_references = list(set(_gen_dict_extract(RefPath.REF, referenced_methods)))
+            for method_name, method in path.items():
+                ref_path = RefPath(method[RefPath.X_LOCATION][RefPath.REF])
+                all_references = list(set(_gen_dict_extract(RefPath.REF, method)))
                 schema_name = _get_schema_only(all_references)
 
-                methods.append(Method(path_name, method_name, ref_path, 0, schema_name, referenced_methods))
+                methods.append(Method(path_name, method_name, ref_path, 0, schema_name, method))
         LOGGER.info("Total methods: " + str(len(methods)))
 
         config_containers = {}
         for wn in cluster.worker_nodes:
             for pod in wn.pods:
                 for container in pod.containers:
-                    referenced_methods = _get_methods_by_ref(container.ref_path, methods)
-                    if referenced_methods:
-                        config_container_ref = config_containers.setdefault(container.ref_path, {})
-                        config_container_ref['container'] = container
-                        config_container_ref_methods = config_container_ref.setdefault('methods', [])
-                        config_container_ref_methods.append(referenced_methods)
+                    config_container_ref = config_containers.setdefault(container.ref_path, {})
+                    config_container_ref['container'] = container
+                    config_container_ref['methods'] = _get_methods_by_ref(container.ref_path, methods)
 
         new_templates = {}
         for path, config_container in config_containers.items():
@@ -225,11 +222,11 @@ def _get_templates(config_file, new_config_directory):
             paths = {}
             schemas = {}
             # getting all schemas which are referenced to the methods
-            for referenced_methods in config_container['methods']:
-                methods_config = paths.setdefault(referenced_methods.path_name, {})
-                methods_config[referenced_methods.method_name] = referenced_methods.full_method
-                if referenced_methods.schema_name != 'default':
-                    schemas[referenced_methods.schema_name] = schemas_template[referenced_methods.schema_name]
+            for ref_method in config_container['methods']:
+                methods_config = paths.setdefault(ref_method.path_name, {})
+                methods_config[ref_method.method_name] = ref_method.full_method
+                if ref_method.schema_name != 'default':
+                    schemas[ref_method.schema_name] = schemas_template[ref_method.schema_name]
 
             # getting all those schemas which have ref to any schema of methods
             referenced_schemas = {}
