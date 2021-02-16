@@ -18,6 +18,7 @@ LOGGER = logging.getLogger("root")
 
 def create_project(project_name, initial_config, worker_nodes):
     VERBOSE_LOGGER.info("creating project...")
+    project_name = project_name.lower()
     project_directory = os.path.join(str(os.getcwd()).split("/loadbalancer")[0], USERNAME, project_name)
     if os.path.isdir(project_directory):
         raise IsADirectoryError("Project with this name already exists.")
@@ -48,7 +49,7 @@ def create_project(project_name, initial_config, worker_nodes):
     with(open(os.path.join(project.helm_chart_path, "Chart.yaml"), "w")) as chart_file:
         LOGGER.info("writing Chart.YAML file")
         chart_file.write(f"""apiVersion: v2 #mandatory
-name: open-api-chart #mandatory
+name: {project.helm_chart_name} #mandatory
 description: A Helm chart for Kubernetes
 type: application
 version: 0.1.0 #mandatory

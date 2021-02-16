@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
 import * as yup from 'yup';
-import FormikForm from './UI/Form/FormikForm';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { Typography, Grid, Button, CssBaseline } from '@material-ui/core';
+
+import NodeFields from './NodeFields';
+import FormikForm from '../UI/Form/FormikForm';
 
 const projectControls = [
   {
@@ -18,7 +21,15 @@ const projectSchema = yup.object().shape({
 const ProjectForm = (props) => {
   const [ fileName, setFileName ] = useState('Upload');
   const [ formError, setFormError ] = useState(false);
+  const [ submitDisabled, setSubmitDisabled ] = useState(false);
+  const [ saving, setSaving ] = useState(false);
   const [ fileText, setFileText ] = useState('');
+  const { register, handleSubmit, control } = useForm();
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: 'nodes'
+  });
+  const [ nodes, setNodes ] = useState([]);
 
   const fileUploadChanged = (e) => {
     const file = e.target.files[0];
@@ -36,6 +47,37 @@ const ProjectForm = (props) => {
     setFileText('');
     setFileName('Upload');
     props.cancelled();
+  };
+  // it means that form is submitted and saved succesfully
+  if (props.saved) {
+    formCancelled();
+  }
+  if (props.formSubmitErrors && submitDisabled) {
+    setSubmitDisabled(false);
+  }
+
+  const formSubmitHandler = (values) => {
+    if (!(nodes.length && fileName && fileText)) {
+      setFormError(true);
+    } else {
+      const obj = {
+        worker_nodes: [ ...nodes ],
+        name: values.Name,
+        initial_config: JSON.parse(fileText)
+      };
+      props.submitted(obj);
+      setSubmitDisabled(true);
+      setFormError(false);
+    }
+  };
+
+  const submitNodesHandler = (fields) => {
+    setSaving(true);
+    setNodes(fields.nodes);
+  };
+  const appendNode = (field) => {
+    setSaving(false);
+    append(field);
   };
 
   return (
@@ -64,12 +106,24 @@ const ProjectForm = (props) => {
         {props.fileError && <small>config file is required.</small>}
       </Grid>
       <FormikForm
+        submitDisabled={submitDisabled}
         controls={projectControls}
         schema={projectSchema}
-        submitted={props.submitted}
+        submitted={formSubmitHandler}
         cancelled={formCancelled}
-        formError={formError}
+        invalidForm={formError}
+        formErrors={props.formSubmitErrors}
       />
+      <form onSubmit={handleSubmit(submitNodesHandler)}>
+        <NodeFields
+          append={appendNode}
+          fields={fields}
+          register={register}
+          control={control}
+          remove={remove}
+          isSaving={saving}
+        />
+      </form>
       <pre>{fileText}</pre>
     </div>
   );

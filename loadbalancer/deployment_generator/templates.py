@@ -6,6 +6,8 @@ LOGGER = logging.getLogger("root")
 
 def get_deployment_template(app_name, containers_config, wn_name, count):
     VERBOSE_LOGGER.info(f"Started getting deployment for {wn_name}-{str(count)}.")
+
+    app_name = app_name.replace("_", "-")
     tag = containers_config[0]['tag']
 
     containers = ""

@@ -7,6 +7,7 @@ import FormikField from '../Control/FormikField';
 
 const FormikForm = (props) => {
   const classes = useStyles();
+  const { formErrors } = props;
 
   return (
     <div>
@@ -25,7 +26,8 @@ const FormikForm = (props) => {
             <Typography variant="h5" align="center">
               {props.title}
             </Typography>
-            {props.invalidForm && <p className={classes.ErrorText}>Please fill all required fields.</p>}
+            {formErrors && <div className={classes.ErrorText}>{formErrors.map((err) => <p>{err}</p>)}</div>}
+            {props.invalidForm && <p className={classes.ErrorText}>Please add atleast 1 Node and upload config.</p>}
             {props.controls.map((control) => {
               return (
                 <FormikField

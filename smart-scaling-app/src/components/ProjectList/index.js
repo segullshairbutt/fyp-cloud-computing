@@ -24,7 +24,7 @@ const ProjectList = (props) => {
   const classes = useRowStyles();
   const [ deleteProject, setDeleteProject ] = useState(false);
   const [ projectForm, setProjectForm ] = useState(false);
-  let formTitle = projectForm ? 'Project Form' : 'Assign To';
+  let formTitle = 'Project Form';
 
   const disagreed = () => {
     setDeleteProject(false);
@@ -32,6 +32,7 @@ const ProjectList = (props) => {
 
   const formCancelled = () => {
     setProjectForm(false);
+    props.cancelClicked();
   };
 
   return (
@@ -46,11 +47,11 @@ const ProjectList = (props) => {
       <Dialog open={projectForm} title={formTitle} hideActions size="lg">
         {projectForm && (
           <ProjectForm
-            fileUploaded={props.fileUploadChanged}
-            fileName={props.fileName}
-            formSubmitted={props.formSubmitHandler}
+            submitted={props.formSubmitted}
             cancelled={formCancelled}
             text={props.fileText}
+            formSubmitErrors={props.submitErrors}
+            formSaved={props.saved}
           />
         )}
       </Dialog>

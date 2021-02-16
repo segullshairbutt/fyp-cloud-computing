@@ -1,9 +1,50 @@
-import * as yup from 'yup';
+import { useState } from 'react';
 
+import axios from '../custom-axios';
 import ProjectListComponent from '../../components/ProjectList';
 
 const ProjectList = (props) => {
-  return <ProjectListComponent projects={projects} />;
+  const [ saved, setSaved ] = useState(false);
+  const [ errors, setErrors ] = useState(null);
+
+  const cancelButtonHandler = () => {
+    setSaved(false);
+    setErrors(null);
+  };
+
+  const projectSubmitHandler = (obj) => {
+    axios
+      .post('/api/projects/create/', obj)
+      .then((res) => {
+        setSaved(true);
+      })
+      .catch((err) => {
+        if (err.response) {
+          if (err.response.data) {
+            if (err.response.data.error) {
+              setErrors([ err.response.data.error ]);
+            } else {
+              const errorData = err.response.data;
+              const keys = Object.keys(errorData);
+
+              const allErrors = keys.map((key) => [ ...errorData[key].map((error) => key + ': ' + error) ]);
+              setErrors(allErrors.flat(1));
+            }
+          }
+        } else {
+          setErrors([ err.message ]);
+        }
+      });
+  };
+  return (
+    <ProjectListComponent
+      projects={projects}
+      formSubmitted={projectSubmitHandler}
+      submitErrors={errors}
+      formSaved={saved}
+      cancelClicked={cancelButtonHandler}
+    />
+  );
 };
 
 export default ProjectList;

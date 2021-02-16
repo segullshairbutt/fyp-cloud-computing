@@ -42,7 +42,7 @@ def create_server_stubs(app_name, project_id, source_config_file_path, project_d
         for wn, pods in wns.items():
             for pod, single_container in pods.items():
                 for container_name, config in single_container.items():
-                    image_name = _create_server_stub(project_id, config["path"], project_directory,
+                    image_name = _create_server_stub(app_name, project_id, config["path"], project_directory,
                                                      config["tag"] + "config", config["name"])
                     config["image"] = image_name
                     config_tag = config["tag"]
@@ -78,7 +78,7 @@ def create_server_stubs(app_name, project_id, source_config_file_path, project_d
 
     # pushing newly created images
     # push_new_images(project_id)
-    subprocess.call(["helm", "upgrade", helm_chart_name, helm_chart_path])
+    # subprocess.call(["helm", "upgrade", helm_chart_name, helm_chart_path])
     # vanishing the images which has been set to Vanish_able
     vanish_images(project_id)
 
@@ -116,7 +116,7 @@ def create_kubernetes_nodes(worker_nodes):
         print(worker_node, node.name)
 
 
-def _create_server_stub(project_id, config_file, project_directory, config_tag, config_name):
+def _create_server_stub(app_name, project_id, config_file, project_directory, config_tag, config_name):
     VERBOSE_LOGGER.info("creating server stub for provided template.")
 
     output_directory = os.path.join(project_directory, "server-stubs", config_tag, config_name)
@@ -137,7 +137,7 @@ COPY ${JAR_FILE} app.jar
 ENTRYPOINT ["java","-jar","/app.jar"]""")
 
     # building the docker image withe created file.
-    docker_image_name = settings.DOCKER_IMAGE_NAME + f":{config_name.lower()}_image"
+    docker_image_name = settings.DOCKER_IMAGE_NAME + f":{app_name.replace('-', '_')}_{config_name.lower()}_image"
     subprocess.call(["docker", "build", "-t", docker_image_name, output_directory])
 
     # pushing the image to docker hub
