@@ -22,12 +22,17 @@ const useRowStyles = makeStyles({
 
 const ProjectList = (props) => {
   const classes = useRowStyles();
-  const [ deleteProject, setDeleteProject ] = useState(false);
+  const [ deleteProjectId, setDeleteProjectId ] = useState(false);
   const [ projectForm, setProjectForm ] = useState(false);
   let formTitle = 'Project Form';
 
   const disagreed = () => {
-    setDeleteProject(false);
+    setDeleteProjectId(0);
+  };
+
+  const agreed = () => {    
+    props.projectDeleted(deleteProjectId);
+    setDeleteProjectId(0);
   };
 
   const formCancelled = () => {
@@ -43,7 +48,7 @@ const ProjectList = (props) => {
           Add New
         </Button>
       </Typography>
-      <ConfirmationDialog open={deleteProject} disagreed={disagreed} />
+      <ConfirmationDialog open={deleteProjectId} disagreed={disagreed} agreed={agreed} />
       <Dialog open={projectForm} title={formTitle} hideActions size="lg">
         {projectForm && (
           <ProjectForm
@@ -51,14 +56,14 @@ const ProjectList = (props) => {
             cancelled={formCancelled}
             text={props.fileText}
             formSubmitErrors={props.submitErrors}
-            formSaved={props.saved}
+            saved={props.formSaved}
           />
         )}
       </Dialog>
       <ProjectTable
         projects={props.projects}
         showProjectForm={() => setProjectForm(true)}
-        showDeleteProject={() => setDeleteProject(true)}
+        showDeleteProject={(id) => setDeleteProjectId(id)}
       />
     </Aux>
   );

@@ -12,6 +12,7 @@
     "final-form": "^4.20.1",
     "final-form-material-ui": "^0.3.0",
     "formik": "^2.2.6",
+    "immer": "^7.0.9",
     "react": "^17.0.1",
     "react-dom": "^17.0.1",
     "react-final-form": "^6.5.2",

@@ -49,9 +49,11 @@ const ProjectForm = (props) => {
     props.cancelled();
   };
   // it means that form is submitted and saved succesfully
-  if (props.saved) {
-    formCancelled();
-  }
+  // if (props.saved) {
+  //   setFileText('');
+  //   setFileName('Upload');
+  //   setSubmitDisabled(false);
+  // }
   if (props.formSubmitErrors && submitDisabled) {
     setSubmitDisabled(false);
   }

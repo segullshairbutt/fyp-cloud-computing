@@ -9,7 +9,7 @@ export default function ConfirmationDialog(props) {
       size="sm"
       open={props.open}
       successText={'Agree'}
-      successful={props.agreed}
+      successful={() => props.agreed(props.id)}
       cancelText={'Disagree'}
       cancelled={props.disagreed}
     >
@@ -20,5 +20,6 @@ export default function ConfirmationDialog(props) {
 
 ConfirmationDialog.propTypes = {
   disagreed: PropTypes.bool,
-  agreed: PropTypes.bool
+  agreed: PropTypes.bool,
+  id: PropTypes.number
 };

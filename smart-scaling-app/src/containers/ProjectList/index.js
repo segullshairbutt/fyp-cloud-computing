@@ -1,11 +1,40 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import produce from 'immer';
 
 import axios from '../custom-axios';
 import ProjectListComponent from '../../components/ProjectList';
 
+const converErrorIntoArray = (err) => {
+  if (err.response) {
+    if (err.response.data) {
+      if (err.response.data.error) {
+        return [ err.response.data.error ];
+      } else {
+        const errorData = err.response.data;
+        const keys = Object.keys(errorData);
+
+        const allErrors = keys.map((key) => [ ...errorData[key].map((error) => key + ': ' + error) ]);
+        return allErrors.flat(1);
+      }
+    }
+  } else {
+    return [ err.message ];
+  }
+};
+
 const ProjectList = (props) => {
   const [ saved, setSaved ] = useState(false);
   const [ errors, setErrors ] = useState(null);
+  const [ projects, setProjects ] = useState([]);
+
+  useEffect(() => {
+    axios
+      .get('/api/projects/')
+      .then((res) => {
+        setProjects(res.data);
+      })
+      .catch((err) => setErrors(converErrorIntoArray(err)));
+  }, []);
 
   const cancelButtonHandler = () => {
     setSaved(false);
@@ -16,33 +45,37 @@ const ProjectList = (props) => {
     axios
       .post('/api/projects/create/', obj)
       .then((res) => {
+        setProjects(
+          produce(projects, (draft) => {
+            draft.push(res.data);
+          })
+        );
         setSaved(true);
       })
-      .catch((err) => {
-        if (err.response) {
-          if (err.response.data) {
-            if (err.response.data.error) {
-              setErrors([ err.response.data.error ]);
-            } else {
-              const errorData = err.response.data;
-              const keys = Object.keys(errorData);
+      .catch((err) => setErrors(converErrorIntoArray(err)));
+  };
 
-              const allErrors = keys.map((key) => [ ...errorData[key].map((error) => key + ': ' + error) ]);
-              setErrors(allErrors.flat(1));
-            }
-          }
-        } else {
-          setErrors([ err.message ]);
-        }
-      });
+  const projectDeleteHandler = (id) => {
+    axios
+      .delete(`/api/projects/${id}/`)
+      .then(() => {
+        setProjects(
+          produce(projects, (draft) => {
+            const index = draft.findIndex((project) => project.id === id);            
+            if (index !== -1) draft.splice(index, 1);
+          })
+        );
+      })
+      .catch((err) => setErrors(converErrorIntoArray(err)));
   };
   return (
     <ProjectListComponent
       projects={projects}
-      formSubmitted={projectSubmitHandler}
       submitErrors={errors}
       formSaved={saved}
       cancelClicked={cancelButtonHandler}
+      formSubmitted={projectSubmitHandler}
+      projectDeleted={projectDeleteHandler}
     />
   );
 };

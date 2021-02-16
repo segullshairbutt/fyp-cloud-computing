@@ -28,7 +28,8 @@ const ProjectTable = (props) => {
               key={project.id}
               project={project}
               showProjectForm={props.showProjectForm}
-              showDeleteProject={props.showDeleteProject}
+              showDeleteProject={() => props.showDeleteProject(project.id)}
+              deleted={props.deleteProject}
             />
           ))}
         </TableBody>
