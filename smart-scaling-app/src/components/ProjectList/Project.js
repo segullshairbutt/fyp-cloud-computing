@@ -5,6 +5,7 @@ import TableCell from '@material-ui/core/TableCell';
 import TableRow from '@material-ui/core/TableRow';
 import DetailsIcon from '@material-ui/icons/Details';
 import DeleteIcon from '@material-ui/icons/Delete';
+import { Link } from 'react-router-dom';
 
 const useRowStyles = makeStyles({
   root: {
@@ -31,9 +32,11 @@ const Project = (props) => {
         <TableCell>{project.config ? project.config.tag : 'None'}</TableCell>
         <TableCell>{project.config ? 'Running' : 'Pending'}</TableCell>
         <TableCell>
-          <IconButton aria-label="expand row" size="small" onClick={props.showProjectForm}>
-            <DetailsIcon />
-          </IconButton>
+          <Link to={'/' + props.id}>
+            <IconButton aria-label="expand row" size="small">
+              <DetailsIcon />
+            </IconButton>
+          </Link>
         </TableCell>
         <TableCell>
           <IconButton aria-label="expand row" size="small" onClick={props.showDeleteProject}>

@@ -26,8 +26,8 @@ const ProjectTable = (props) => {
           {props.projects.map((project) => (
             <ProjectRow
               key={project.id}
+              id={project.id}
               project={project}
-              showProjectForm={props.showProjectForm}
               showDeleteProject={() => props.showDeleteProject(project.id)}
               deleted={props.deleteProject}
             />

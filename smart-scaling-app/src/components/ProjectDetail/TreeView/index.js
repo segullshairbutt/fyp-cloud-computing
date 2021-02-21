@@ -79,39 +79,31 @@ const generateId = () => {
   return 'id' + new Date().getTime();
 };
 
+const transformTreeItems = (node) => {
+  return (
+    <TreeItem nodeId={node.id} label={node.name} key={node.id}>
+      {node.children ? node.children.map((child) => transformTreeItems(child)) : null}
+    </TreeItem>
+  );
+};
+
 export default function CustomizedTreeView(props) {
   const classes = useStyles();
-  const { clusters, schemas } = props;
 
-  const schemaItems = Object.keys(schemas).map((schema, schemaIndex) => {
-    const schemaId = generateId();
-    return (
-      <StyledTreeItem key={schemaId} nodeId={schemaId} label={schema}>
-        {Object.keys(schemas[schema]).map((path, pathIndex) => {
-          const pathId = generateId();
-          return <StyledTreeItem key={schemaIndex + pathIndex + 3} nodeId={schemaIndex + pathIndex + 3} label={path}>
-            {Object.keys(schemas[schema][path]).map((method, methodIndex) => (
-              <StyledTreeItem key={schemaId + path + method} nodeId={schemaId + path + method} label={method} />
-            ))}
-          </StyledTreeItem>
-        })}
-      </StyledTreeItem>
-    );
-  });
-  debugger;
   return (
     <TreeView
       className={classes.root}
-      defaultExpanded={[ '1' ]}
+      defaultExpanded={[ '2' ]}
       defaultCollapseIcon={<MinusSquare />}
       defaultExpandIcon={<PlusSquare />}
       defaultEndIcon={<CloseSquare />}
     >
-      <StyledTreeItem nodeId="1" label="Main">
+      {/* <StyledTreeItem nodeId="1" label="Main">
         <StyledTreeItem nodeId="2" label="Schemas">
           {schemaItems}
         </StyledTreeItem>
-      </StyledTreeItem>
+      </StyledTreeItem> */}
+      {props.node ? transformTreeItems(props.node) : null}
     </TreeView>
   );
 }

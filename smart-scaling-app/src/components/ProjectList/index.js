@@ -30,7 +30,7 @@ const ProjectList = (props) => {
     setDeleteProjectId(0);
   };
 
-  const agreed = () => {    
+  const agreed = () => {
     props.projectDeleted(deleteProjectId);
     setDeleteProjectId(0);
   };
@@ -60,11 +60,7 @@ const ProjectList = (props) => {
           />
         )}
       </Dialog>
-      <ProjectTable
-        projects={props.projects}
-        showProjectForm={() => setProjectForm(true)}
-        showDeleteProject={(id) => setDeleteProjectId(id)}
-      />
+      <ProjectTable projects={props.projects} showDeleteProject={(id) => setDeleteProjectId(id)} />
     </Aux>
   );
 };

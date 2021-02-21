@@ -1,4 +1,5 @@
 import Container from '@material-ui/core/Container';
+import { Route } from 'react-router-dom';
 
 import Appbar from './components/Appbar';
 import ProjectList from './containers/ProjectList';
@@ -10,8 +11,10 @@ function App() {
   return [
     <Appbar />,
     <Container>
-      {/* <ProjectList /> */}
-      <ProjectDetail />
+      <Route path="/:id" component={ProjectDetail} />
+      <Route exact path="/" component={ProjectList} />
+
+      {/* <ProjectDetail /> */}
     </Container>
   ];
 }

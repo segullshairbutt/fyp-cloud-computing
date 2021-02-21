@@ -1,8 +1,50 @@
+import { useEffect, useState } from 'react';
+
+import axios from '../custom-axios';
 import ProjectDetailComponent from '../../components/ProjectDetail';
 
 const ProjectDetail = (props) => {
-  const { code } = project.config;      
-  return <ProjectDetailComponent code={code} />;
+  const [ project, setProject ] = useState(null);
+  const [ error, setError ] = useState(null);
+  const [ buttonsDisabled, setButtonsDisabled ] = useState(false);
+
+  useEffect(() => {
+    const id = props.match.params.id;
+    if (id && !project) {
+      axios
+        .get('/api/projects/'.concat(id))
+        .then((res) => {
+          setProject(res.data);
+        })
+        .catch((err) => {
+          setError(err);
+        });
+    }
+  }, []);
+  const startProjectClickHandler = () => {
+    axios.post(`/api/projects/${project.id}/start-monitoring/`);
+    setButtonsDisabled(true);
+  };
+
+  const deleteProjectClickHandler = () => {
+    setButtonsDisabled(true);
+    axios.delete(`/api/projects/${project.id}/`).then(() => {
+      props.history.push('/');
+    });
+  };
+
+  return project ? (
+    <ProjectDetailComponent
+      project={project}
+      projectName={project.name}
+      user={project.username}
+      buttonsDisabled={buttonsDisabled}
+      projectStarted={startProjectClickHandler}
+      projectDeleted={deleteProjectClickHandler}
+    />
+  ) : (
+    <p>Project not found.</p>
+  );
 };
 
 export default ProjectDetail;
