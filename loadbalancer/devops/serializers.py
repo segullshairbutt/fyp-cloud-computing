@@ -4,6 +4,7 @@ from rest_framework import serializers
 import json
 
 from devops.models import Project
+from devops.utilities import to_template_dto
 from monitoring_app.utilities import get_latest_filetag
 
 
@@ -22,7 +23,8 @@ class ProjectModelSerializer(serializers.ModelSerializer):
         file_name = latest_file_tag + "config.json"
         if latest_file_tag != "00":
             with open(os.path.join(config_data_dir, file_name), "r") as config_file:
-                return {"tag": latest_file_tag, "code": json.load(config_file)}
+                template_dto = to_template_dto(json.load(config_file))
+                return {"tag": latest_file_tag, "code": template_dto}
 
     class Meta:
         model = Project
