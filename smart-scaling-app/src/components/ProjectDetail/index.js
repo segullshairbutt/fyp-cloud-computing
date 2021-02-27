@@ -1,43 +1,12 @@
 import React, { useState } from 'react';
 import { makeStyles } from '@material-ui/core/styles';
-import Paper from '@material-ui/core/Paper';
 import Grid from '@material-ui/core/Grid';
-import { Button, Container, Typography } from '@material-ui/core';
 
+import Aux from '../hoc/Auxx';
+import Topbar from './Topbar';
 import TreeView from './TreeView';
 import ConfirmationDialog from '../UI/ConfirmationDialog';
-
-const Details = (props) => {
-  return (
-    <Container>
-      <Typography align="left" variant="h2">
-        {props.name}
-      </Typography>
-      <Typography align="left" variant="h4">
-        User: {props.username}
-      </Typography>
-      <Grid container spacing={1}>
-        <Grid item xs={6}>
-          <Typography align="left" variant="h6">
-            Status: {props.status}
-          </Typography>
-        </Grid>
-        <Grid item xs={3}>
-          {props.status !== 'Started' && (
-            <Button variant="contained" color="primary" onClick={props.started} disabled={props.buttonsDisabled}>
-              Start Now
-            </Button>
-          )}
-        </Grid>
-        <Grid item xs={3}>
-          <Button variant="contained" color="secondary" onClick={props.deleted} disabled={props.buttonsDisabled}>
-            Delete
-          </Button>
-        </Grid>
-      </Grid>
-    </Container>
-  );
-};
+import { Paper } from '@material-ui/core';
 
 const createNodes = (config) => {
   let rootId = 1;
@@ -143,30 +112,27 @@ export default function ProjectDetails(props) {
   };
 
   return (
-    <div className={classes.root}>
-      <Grid container spacing={3}>
-        <Grid item xs={6}>
-          <Paper className={classes.paper}>
-            <ConfirmationDialog open={open} disagreed={disAgreed} agreed={agreed} />
-            <Details
-              name={props.projectName}
-              status={status}
-              username={props.user}
-              buttonsDisabled={props.buttonsDisabled}
-              started={props.projectStarted}
-              deleted={() => setOpen(true)}
-            />
-          </Paper>
+    <Aux>
+      <Topbar
+        deleted={() => setOpen(true)}
+        name={props.projectName}
+        status={status}
+        user={props.user}
+        buttonsDisabled={props.buttonsDisabled}
+        started={props.projectStarted}
+      />
+      <div className={classes.root}>
+        <ConfirmationDialog open={open} disagreed={disAgreed} agreed={agreed} />
+        <Grid container spacing={3} className={classes.treeContainer}>
+          <Grid item xs={12}>
+            <Paper>Project Further details here if needed.</Paper>
+          </Grid>
+          <Grid item xs={10}>
+            <TreeView node={nodes} />
+          </Grid>
         </Grid>
-        <Grid item xs={6}>
-          <Paper className={classes.paper}>
-            <Grid item xs zeroMinWidth>
-              <TreeView node={nodes} />
-            </Grid>
-          </Paper>
-        </Grid>
-      </Grid>
-    </div>
+      </div>
+    </Aux>
   );
 }
 
@@ -174,10 +140,7 @@ const useStyles = makeStyles((theme) => ({
   root: {
     flexGrow: 1
   },
-  paper: {
-    padding: theme.spacing(2),
-    textAlign: 'center',
-    color: theme.palette.text.secondary,
-    height: 'auto'
+  treeContainer: {
+    marginTop: '10px'
   }
 }));
