@@ -23,7 +23,7 @@ class ProjectModelSerializer(serializers.ModelSerializer):
         file_name = latest_file_tag + "config.json"
         if latest_file_tag != "00":
             with open(os.path.join(config_data_dir, file_name), "r") as config_file:
-                template_dto = to_template_dto(json.load(config_file))
+                template_dto = to_template_dto(json.load(config_file), latest_file_tag)
                 return {"tag": latest_file_tag, "code": template_dto}
 
     class Meta:

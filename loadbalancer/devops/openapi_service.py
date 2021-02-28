@@ -1,3 +1,4 @@
+import json
 import shutil
 import subprocess
 import os
@@ -9,6 +10,7 @@ from deployment_generator.models import Image
 from devops import constants
 from devops.constants import CLUSTER_TEMPLATE
 from devops.models import Project, Path, Method
+from monitoring_app.constants import NEW_CONFIG
 from monitoring_app.data_monitorer import data_monitor
 
 USERNAME = 'admin'
@@ -96,3 +98,13 @@ def start_monitoring(project_id):
 
     data_monitor(project)
 
+
+def get_config_file(project_id, file_name):
+    project = Project.objects.get(id=project_id)
+    file_name = file_name + ".json"
+    config = dict()
+    for file in os.listdir(os.path.join(project.directory, NEW_CONFIG)):
+        if file == file_name:
+            with open(os.path.join(project.directory, NEW_CONFIG, file)) as config_file:
+                config = json.load(config_file)
+    return config

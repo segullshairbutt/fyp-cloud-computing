@@ -1,5 +1,6 @@
 import copy
 
+from constants import CONTAINERS
 from monitoring_app.utilities import _derive_template_components
 
 
@@ -21,7 +22,7 @@ def _get_methods_by_schema(methods, schema):
     return schema_methods
 
 
-def to_template_dto(config):
+def to_template_dto(config, tag):
     copied_template = copy.deepcopy(config)
     clusters, methods = _derive_template_components(copied_template)
 
@@ -29,9 +30,11 @@ def to_template_dto(config):
         for wn in cluster.worker_nodes:
             for pod in wn.pods:
                 for container in pod.containers:
-                    container.full_component['methods'] = _get_methods_by_ref_path(methods, container.ref_path)
-
-    for method in methods:
-        schemas = copied_template.setdefault('schemas', {})
-        schemas[method.schema_name] = _get_methods_by_schema(methods, method.schema_name)
-    return copied_template
+                    pod.full_component[CONTAINERS][container.name] = f"{tag}_{cluster.name}_{wn.name}_{pod.name}_{container.name}"
+                    # container.full_component['methods'] = _get_methods_by_ref_path(methods, container.ref_path)
+    new_template = dict()
+    new_template["clusters"] = copied_template["info"]["x-clusters"]
+    # for method in methods:
+    #     schemas = copied_template.setdefault('schemas', {})
+    #     schemas[method.schema_name] = _get_methods_by_schema(methods, method.schema_name)
+    return new_template

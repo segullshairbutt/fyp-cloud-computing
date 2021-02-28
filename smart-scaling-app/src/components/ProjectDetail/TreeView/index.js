@@ -6,6 +6,7 @@ import TreeView from '@material-ui/lab/TreeView';
 import TreeItem from '@material-ui/lab/TreeItem';
 import Collapse from '@material-ui/core/Collapse';
 import { useSpring, animated } from 'react-spring/web.cjs'; // web.cjs is required for IE 11 support
+import { Link } from 'react-router-dom';
 
 function MinusSquare(props) {
   return (
@@ -75,20 +76,24 @@ const useStyles = makeStyles({
   }
 });
 
-const generateId = () => {
-  return 'id' + new Date().getTime();
-};
-
-const transformTreeItems = (node) => {
-  return (
+const transformTreeItems = (node, clicked) => {
+  return node.children ? (
     <TreeItem nodeId={node.id} label={node.name} key={node.id}>
-      {node.children ? node.children.map((child) => transformTreeItems(child)) : null}
+      {node.children ? node.children.map((child) => transformTreeItems(child, clicked)) : null}
     </TreeItem>
+  ) : (
+    <Link onClick={() => clicked(node.name)}>
+      <TreeItem nodeId={node.id} label={node.name} key={node.id} />
+    </Link>
   );
 };
 
 export default function CustomizedTreeView(props) {
   const classes = useStyles();
+  const submitHandler = (name) => {
+    console.log(name);
+    props.clicked(name);
+  };
 
   return (
     <TreeView
@@ -103,7 +108,7 @@ export default function CustomizedTreeView(props) {
           {schemaItems}
         </StyledTreeItem>
       </StyledTreeItem> */}
-      {props.node ? transformTreeItems(props.node) : null}
+      {props.node ? transformTreeItems(props.node, submitHandler) : null}
     </TreeView>
   );
 }

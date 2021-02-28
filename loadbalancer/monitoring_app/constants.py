@@ -7,6 +7,7 @@ POD_LEVEL = "pod"
 CL_LEVEL = "cluster"
 WN_LEVEL = "worker-node"
 SCHEMA_LEVEL = "x-storage-level"
+NEW_CONFIG = "new_configs"
 
 template = {
   "openapi": "3.0.0",

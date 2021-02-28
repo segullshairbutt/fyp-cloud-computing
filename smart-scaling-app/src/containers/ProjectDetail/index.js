@@ -32,6 +32,9 @@ const ProjectDetail = (props) => {
       props.history.push('/');
     });
   };
+  const configClickHandler = (name) => {
+    window.open(`/${project.id}/swagger/${name}`);   
+  };
 
   return project ? (
     <ProjectDetailComponent
@@ -39,6 +42,7 @@ const ProjectDetail = (props) => {
       projectName={project.name}
       user={project.username}
       buttonsDisabled={buttonsDisabled}
+      configClicked={configClickHandler}
       projectStarted={startProjectClickHandler}
       projectDeleted={deleteProjectClickHandler}
     />

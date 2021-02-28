@@ -10,8 +10,7 @@ import { Paper } from '@material-ui/core';
 
 const createNodes = (config) => {
   let rootId = 1;
-  const rootNode = { name: 'main', id: rootId++, children: [] };
-
+  const rootNode = { name: 'main', id: rootId++, children: [] };  
   Object.keys(config).forEach((key1) => {
     const obj1 = { name: key1 + '', id: rootId++, children: [] };
     const firstLevelObject = config[key1];
@@ -64,7 +63,7 @@ const createNodes = (config) => {
                                   const obj7 = { name: key7 + '', id: rootId++, children: [] };
                                   obj6.children.push(obj7);
 
-                                  const seventhLevelObject = sixthLevelObject['key7'];
+                                  const seventhLevelObject = sixthLevelObject[key7];
                                   if (typeof seventhLevelObject === 'string') {
                                     obj7.children.push({ name: seventhLevelObject, id: rootId++ });
                                   } else
@@ -99,8 +98,8 @@ export default function ProjectDetails(props) {
   if (config) {
     status = 'Started';
     const { code } = config;
-    const newConfig = { clusters: code.info['x-clusters'], schemas: code.schemas };
-    nodes = createNodes(newConfig);
+    const clusters = code.clusters;
+    nodes = createNodes(clusters);
   }
 
   const agreed = () => {
@@ -128,7 +127,7 @@ export default function ProjectDetails(props) {
             <Paper>Project Further details here if needed.</Paper>
           </Grid>
           <Grid item xs={10}>
-            <TreeView node={nodes} />
+            <TreeView node={nodes} clicked={props.configClicked}/>
           </Grid>
         </Grid>
       </div>

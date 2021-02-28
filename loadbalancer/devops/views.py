@@ -48,3 +48,8 @@ class ProjectMonitoringView(views.APIView):
         except Project.DoesNotExist:
             return Response(status=status.HTTP_400_BAD_REQUEST, data={"error": "Project with this id not found."})
         return Response(status=status.HTTP_200_OK, data={"info": "Project monitoring started."})
+
+
+class ProjectConfigView(views.APIView):
+    def get(self, request, pk, config_key):
+        return Response(openapi_service.get_config_file(pk, config_key))
