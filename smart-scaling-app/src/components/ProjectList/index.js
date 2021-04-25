@@ -49,7 +49,7 @@ const ProjectList = (props) => {
         </Button>
       </Typography>
       <ConfirmationDialog open={deleteProjectId} disagreed={disagreed} agreed={agreed} />
-      <Dialog open={projectForm} title={formTitle} hideActions size="lg">
+      <Dialog open={projectForm && !props.formSaved} title={formTitle} hideActions size="lg">
         {projectForm && (
           <ProjectForm
             submitted={props.formSubmitted}

@@ -161,52 +161,53 @@ def data_monitor(project):
             project.id,
             os.path.join(project.config_data_path, configfile),
             project.directory, project.helm_chart_name)
+    else:
+        # otherwise monitor on existing data
+        for run in range(1):
+            latest_filetag = str(get_latest_filetag(config_dir_path))
+            data_read_file = latest_filetag + 'data.json'
+            data_read_path = os.path.join(config_dir_path, data_read_file)
+            with open(data_read_path) as f:
+                data = f.read()
+                dataset = json.loads(data)
 
-    for run in range(1):
-        latest_filetag = str(get_latest_filetag(config_dir_path))
-        data_read_file = latest_filetag + 'data.json'
-        data_read_path = os.path.join(config_dir_path, data_read_file)
-        with open(data_read_path) as f:
-            data = f.read()
-            dataset = json.loads(data)
+            # call monitoring function to check whether data.json file have any object that exceeds
+            # threshold, if yes then we need to update the template (config.json file)
+            new_template = _monitor_scaling(dataset, config_dir_path)
+            # if false then no change in template occur after monitoring , need to add more objects to the latest
+            # data.json file
 
-        # call monitoring function to check whether data.json file have any object that exceeds
-        # threshold, if yes then we need to update the template (config.json file)
-        new_template = _monitor_scaling(dataset, config_dir_path)
-        # if false then no change in template occur after monitoring , need to add more objects to the latest
-        # data.json file
+            if not new_template:
+                # no need to update the template just overwrite the new data to latest data.json file
+                # add more objects to the latest data.json file
+                data_file = str(get_latest_filetag(config_dir_path)) + 'data.json'
+                config_file = str(get_latest_filetag(config_dir_path)) + 'config.json'
+                _generate_related_data(config_dir_path, config_file, data_file)
 
-        if not new_template:
-            # no need to update the template just overwrite the new data to latest data.json file
-            # add more objects to the latest data.json file
-            data_file = str(get_latest_filetag(config_dir_path)) + 'data.json'
-            config_file = str(get_latest_filetag(config_dir_path)) + 'config.json'
-            _generate_related_data(config_dir_path, config_file, data_file)
+                LOGGER.info("no changing in template no need to update the config file")
+                continue
+            else:
+                print('--------------------------')
+                VERBOSE_LOGGER.info("changes detected, trying to create new configuration")
+                print('--------------------------')
 
-            LOGGER.info("no changing in template no need to update the config file")
-            continue
-        else:
-            print('--------------------------')
-            VERBOSE_LOGGER.info("changes detected, trying to create new configuration")
-            print('--------------------------')
+                # creating name for new configuration file
+                new_config_file = str(_get_new_filetag(config_dir_path)) + 'config.json'
 
-            # creating name for new configuration file
-            new_config_file = str(_get_new_filetag(config_dir_path)) + 'config.json'
+                # creating name for new data file
+                new_data_file = str(_get_new_filetag(config_dir_path)) + 'data.json'
 
-            # creating name for new data file
-            new_data_file = str(_get_new_filetag(config_dir_path)) + 'data.json'
+                # creating config.json file with new template
+                _write_config_file(new_template, config_dir_path, new_config_file)
 
-            # creating config.json file with new template
-            _write_config_file(new_template, config_dir_path, new_config_file)
+                # creating the data.json file populate data according to new template
+                data_generator.generate_data(config_dir_path, new_config_file, new_data_file)
 
-            # creating the data.json file populate data according to new template
-            data_generator.generate_data(config_dir_path, new_config_file, new_data_file)
-
-            # creating the server side code
-            utilities.create_server_stubs(
-                f"{project.username}-{project.name}",
-                project.id, os.path.join(project.config_data_path, new_config_file),
-                project.directory, project.helm_chart_name)
+                # creating the server side code
+                utilities.create_server_stubs(
+                    f"{project.username}-{project.name}",
+                    project.id, os.path.join(project.config_data_path, new_config_file),
+                    project.directory, project.helm_chart_name)
 
 
 def _monitor_scaling(config_data, config_path):

@@ -93,6 +93,17 @@ def delete_project(project_id):
     LOGGER.info("project deleted successfully.")
 
 
+def reset_project(project_id):
+    VERBOSE_LOGGER.info("Resetting a project started.")
+
+    for image in Image.objects.filter(project_id=project_id):
+        subprocess.call(["docker", "rmi", image.name])
+        image.delete()
+        LOGGER.info(image.name + " has been deleted.")
+
+    LOGGER.info("project reset successful.")
+
+
 def start_monitoring(project_id):
     project = Project.objects.get(id=project_id)
 

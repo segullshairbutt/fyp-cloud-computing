@@ -4,6 +4,7 @@ import logging
 import os
 import shutil
 import subprocess
+import javaproperties
 from os.path import basename
 from zipfile import ZipFile
 
@@ -37,16 +38,23 @@ def create_server_stubs(app_name, project_id, source_config_file_path, project_d
             image.status = image.VANISH_ABLE
             image.save()
 
+    # creating the server stubs
     config_tag = None
     for cl, wns in new_template_paths.items():
         for wn, pods in wns.items():
             for pod, single_container in pods.items():
+                port = 8080
+
                 for container_name, config in single_container.items():
                     image_name = _create_server_stub(app_name, project_id, config["path"], project_directory,
-                                                     config["tag"] + "config", config["name"])
+                                                     config["tag"] + "config", config["name"], port)
                     config["image"] = image_name
+                    config["port"] = port
                     config_tag = config["tag"]
 
+                    port += 1
+
+    # creating the helm templates
     templates = ""
     for cl_name, cluster in new_template_paths.items():
         count = 0
@@ -62,10 +70,12 @@ def create_server_stubs(app_name, project_id, source_config_file_path, project_d
     helm_chart_template_path = os.path.join(project_directory, ProjectPaths.HELM_CHARTS, ProjectPaths.TEMPLATES)
     _delete_folder_content(helm_chart_template_path)
 
+    # dumping the yaml deployments to file
     with open(os.path.join(helm_chart_template_path, "All Deployments.yaml"), "w") as output_file:
         output_file.write(templates)
     helm_deployment_path = os.path.join(project_directory, ProjectPaths.HELM_DEPLOYMENTS)
 
+    # creating zip of current configurations
     helm_chart_path = os.path.join(project_directory, ProjectPaths.HELM_CHARTS)
     with ZipFile(os.path.join(helm_deployment_path, str(config_tag) + "config"), "w") as zip_obj:
         LOGGER.info("Creating zip file for Helm Chart and Templates.")
@@ -77,10 +87,32 @@ def create_server_stubs(app_name, project_id, source_config_file_path, project_d
     create_kubernetes_nodes(list(new_template_paths[next(iter(new_template_paths))].keys()))
 
     # pushing newly created images
-    # push_new_images(project_id)
-    # subprocess.call(["helm", "upgrade", helm_chart_name, helm_chart_path])
-    # vanishing the images which has been set to Vanish_able
+    push_new_images(project_id)
+
+    subprocess.call(["helm", "upgrade", helm_chart_name, helm_chart_path])
+
+    # vanishing the images which has been set to Vanish_able.
     vanish_images(project_id)
+
+    LOGGER.info("Getting the service url and adding it to template")
+    for cl, wns in new_template_paths.items():
+        for wn, pods in wns.items():
+            for pod, single_container in pods.items():
+                for container_name, config in single_container.items():
+                    print("CONTAINER NAME: " + config["name"])
+                    cmd = ["minikube", "service", f"service-{config['name'].replace('_', '-')}", "--url"]
+                    output = subprocess.Popen(cmd, stdout=subprocess.PIPE).communicate()[0]
+                    service_url = output.strip()
+
+                    LOGGER.info(f"url for service-{config['name'].replace('_', '-')} is {service_url}")
+                    with open(os.path.join(new_config_files_path, config["name"] + ".json"), "r+") as template_file:
+                        template_data = json.load(template_file)
+                        template_data["servers"][0]["url"] = service_url.decode("utf-8")
+
+                        template_file.seek(0)
+
+                        json.dump(template_data, template_file, indent=4)
+                        template_file.truncate()
 
 
 def create_kubernetes_nodes(worker_nodes):
@@ -116,12 +148,20 @@ def create_kubernetes_nodes(worker_nodes):
         print(worker_node, node.name)
 
 
-def _create_server_stub(app_name, project_id, config_file, project_directory, config_tag, config_name):
+def _create_server_stub(app_name, project_id, config_file, project_directory, config_tag, config_name, port):
     VERBOSE_LOGGER.info("creating server stub for provided template.")
 
     output_directory = os.path.join(project_directory, "server-stubs", config_tag, config_name)
     subprocess.call(
         ["java", "-jar", JAR_FILE_PATH, "generate", "-i", config_file, "-g", "spring", "-o", output_directory])
+
+    # changing the port of application in application.properties file
+    prop_file_path = find_file_path("application.properties", output_directory)
+
+    with open(prop_file_path, "w+") as prop_file:
+        all_props = javaproperties.load(prop_file)
+        all_props["server.port"] = str(port)
+        javaproperties.dump(all_props, prop_file)
 
     # packaging the maven project
     LOGGER.info("packaging the maven application")
@@ -277,3 +317,9 @@ def _delete_folder_content(folder):
         except Exception as e:
             LOGGER.error('Failed to delete %s. Reason: %s' % (file_path, e))
             print('Failed to delete %s. Reason: %s' % (file_path, e))
+
+
+def find_file_path(filename, search_path):
+    for root, directory, files in os.walk(search_path):
+        if filename in files:
+            return os.path.join(root, filename)
