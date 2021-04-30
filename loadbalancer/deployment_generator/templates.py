@@ -52,6 +52,7 @@ def get_containers(name, image_name, port):
     VERBOSE_LOGGER.info(f"Started getting containers config for {name}.")
     return f"""      - name: {name}
         image: {image_name}
+        imagePullPolicy: Always
         ports:
         - containerPort: {port}
           name: {name[-2:]}"""

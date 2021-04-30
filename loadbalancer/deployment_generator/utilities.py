@@ -17,6 +17,7 @@ from deployment_generator.templates import get_deployment_template
 from monitoring_app.models import Cluster, RefPath, Method
 from monitoring_app.utilities import _gen_dict_extract, _get_schema_only, _get_schemas_only
 
+
 VERBOSE_LOGGER = logging.getLogger("mid-verbose")
 LOGGER = logging.getLogger("root")
 
@@ -107,7 +108,8 @@ def create_server_stubs(app_name, project_id, source_config_file_path, project_d
                     LOGGER.info(f"url for service-{config['name'].replace('_', '-')} is {service_url}")
                     with open(os.path.join(new_config_files_path, config["name"] + ".json"), "r+") as template_file:
                         template_data = json.load(template_file)
-                        template_data["servers"][0]["url"] = service_url.decode("utf-8")
+                        url = service_url.decode("utf-8")
+                        template_data["servers"][0]["url"] = f"{url}/demo/"
 
                         template_file.seek(0)
 
@@ -160,7 +162,9 @@ def _create_server_stub(app_name, project_id, config_file, project_directory, co
 
     with open(prop_file_path, "w+") as prop_file:
         all_props = javaproperties.load(prop_file)
-        all_props["server.port"] = str(port)
+        port = str(port)
+        all_props["server.port"] = port
+        all_props["server.servlet.context-path"] = f"/demo-{port[-1:]}/"
         javaproperties.dump(all_props, prop_file)
 
     # packaging the maven project
@@ -181,7 +185,6 @@ ENTRYPOINT ["java","-jar","/app.jar"]""")
     subprocess.call(["docker", "build", "-t", docker_image_name, output_directory])
 
     # pushing the image to docker hub
-    # subprocess.call(["docker", "push", docker_image_name])
     Image.objects.create(name=docker_image_name, project_id=project_id)
     return docker_image_name
 
