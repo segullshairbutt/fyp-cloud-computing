@@ -4,21 +4,21 @@ import os
 from monitoring_app.models import Method, RefPath, Cluster
 
 
-def _gen_dict_extract(key, var):
+def gen_dict_extract(key, var):
     if hasattr(var, 'items'):
         for k, v in var.items():
             if k == key:
                 yield v
             if isinstance(v, dict):
-                for result in _gen_dict_extract(key, v):
+                for result in gen_dict_extract(key, v):
                     yield result
             elif isinstance(v, (list)):
                 for d in v:
-                    for result in _gen_dict_extract(key, d):
+                    for result in gen_dict_extract(key, d):
                         yield result
 
 
-def _get_schema_only(references):
+def get_schema_only(references):
     saved_schema = 'default'
     for reference in references:
         schema = reference.split("#/components/schemas/")
@@ -30,7 +30,7 @@ def _get_schema_only(references):
     return saved_schema
 
 
-def _get_schemas_only(references):
+def get_schemas_only(references):
     saved_schemas = []
     for reference in references:
         schema = reference.split("#/components/schemas/")
@@ -72,8 +72,8 @@ def _derive_template_components(template):
         for method_name, method in path.items():
             ref_path = RefPath(method[RefPath.X_LOCATION][RefPath.REF])
 
-            all_references = list(set(_gen_dict_extract('$ref', method)))
-            schema_name = _get_schema_only(all_references)
+            all_references = list(set(gen_dict_extract('$ref', method)))
+            schema_name = get_schema_only(all_references)
 
             methods.append(
                 Method(path_name, method_name, ref_path, method["x-metrics"]["load"], schema_name, method))

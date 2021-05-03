@@ -15,7 +15,7 @@ from constants import ProjectPaths
 from deployment_generator.models import Node, Image
 from deployment_generator.templates import get_deployment_template
 from monitoring_app.models import Cluster, RefPath, Method
-from monitoring_app.utilities import _gen_dict_extract, _get_schema_only, _get_schemas_only
+from monitoring_app.utilities import gen_dict_extract, get_schema_only, get_schemas_only
 
 
 VERBOSE_LOGGER = logging.getLogger("mid-verbose")
@@ -47,10 +47,15 @@ def create_server_stubs(app_name, project_id, source_config_file_path, project_d
                 port = 8080
 
                 for container_name, config in single_container.items():
-                    image_name = _create_server_stub(app_name, project_id, config["path"], project_directory,
-                                                     config["tag"] + "config", config["name"], port)
+                    context_path = f"demo-{str(port)[-1:]}"
+
+                    image_name = _create_server_stub(
+                        app_name, project_id, config["path"], project_directory, config["tag"] + "config",
+                        config["name"], port, context_path=context_path)
+
                     config["image"] = image_name
                     config["port"] = port
+                    config["context_path"] = context_path
                     config_tag = config["tag"]
 
                     port += 1
@@ -88,7 +93,7 @@ def create_server_stubs(app_name, project_id, source_config_file_path, project_d
     create_kubernetes_nodes(list(new_template_paths[next(iter(new_template_paths))].keys()))
 
     # pushing newly created images
-    push_new_images(project_id)
+    # push_new_images(project_id)
 
     subprocess.call(["helm", "upgrade", helm_chart_name, helm_chart_path])
 
@@ -109,7 +114,7 @@ def create_server_stubs(app_name, project_id, source_config_file_path, project_d
                     with open(os.path.join(new_config_files_path, config["name"] + ".json"), "r+") as template_file:
                         template_data = json.load(template_file)
                         url = service_url.decode("utf-8")
-                        template_data["servers"][0]["url"] = f"{url}/demo/"
+                        template_data["servers"][0]["url"] = f"{url}/{config['context_path']}/"
 
                         template_file.seek(0)
 
@@ -150,7 +155,8 @@ def create_kubernetes_nodes(worker_nodes):
         print(worker_node, node.name)
 
 
-def _create_server_stub(app_name, project_id, config_file, project_directory, config_tag, config_name, port):
+def _create_server_stub(
+        app_name, project_id, config_file, project_directory, config_tag, config_name, port, context_path):
     VERBOSE_LOGGER.info("creating server stub for provided template.")
 
     output_directory = os.path.join(project_directory, "server-stubs", config_tag, config_name)
@@ -164,7 +170,7 @@ def _create_server_stub(app_name, project_id, config_file, project_directory, co
         all_props = javaproperties.load(prop_file)
         port = str(port)
         all_props["server.port"] = port
-        all_props["server.servlet.context-path"] = f"/demo-{port[-1:]}/"
+        all_props["server.servlet.context-path"] = f"/{context_path}/"
         javaproperties.dump(all_props, prop_file)
 
     # packaging the maven project
@@ -229,8 +235,8 @@ def _get_templates(config_file, new_config_directory):
         for path_name, path in config_template['paths'].items():
             for method_name, method in path.items():
                 ref_path = RefPath(method[RefPath.X_LOCATION][RefPath.REF])
-                all_references = list(set(_gen_dict_extract(RefPath.REF, method)))
-                schema_name = _get_schema_only(all_references)
+                all_references = list(set(gen_dict_extract(RefPath.REF, method)))
+                schema_name = get_schema_only(all_references)
 
                 methods.append(Method(path_name, method_name, ref_path, 0, schema_name, method))
         LOGGER.info("Total methods: " + str(len(methods)))
@@ -274,8 +280,8 @@ def _get_templates(config_file, new_config_directory):
             # getting all those schemas which have ref to any schema of methods
             referenced_schemas = {}
             for name, schema in schemas.items():
-                all_references = list(set(_gen_dict_extract('$ref', schema)))
-                schema_names = _get_schemas_only(all_references)
+                all_references = list(set(gen_dict_extract('$ref', schema)))
+                schema_names = get_schemas_only(all_references)
                 for schema_name in schema_names:
                     referenced_schemas[schema_name] = schemas_template[schema_name]
             schemas.update(referenced_schemas)

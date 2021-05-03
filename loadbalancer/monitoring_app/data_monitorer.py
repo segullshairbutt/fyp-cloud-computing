@@ -8,7 +8,7 @@ from deployment_generator import utilities
 from monitoring_app.constants import MAX_WN_LOAD, MAX_POD_LOAD, DEFAULT_SCHEMA_NAME, CL_LEVEL, WN_LEVEL, POD_LEVEL, \
     SCHEMA_LEVEL, MIN_WN_LOAD, MIN_POD_LOAD
 from monitoring_app.models import Cluster, ContainerGroup, MethodGroup, PodGroup, RefPath, Method, Container
-from monitoring_app.utilities import _join_components, _gen_dict_extract, _get_schema_only, clean_template, \
+from monitoring_app.utilities import _join_components, gen_dict_extract, get_schema_only, clean_template, \
     reorder_template, get_latest_filetag
 
 VERBOSE_LOGGER = logging.getLogger("mid-verbose")
@@ -114,8 +114,8 @@ def data_monitor(project):
             for method_name, method in path.items():
                 ref_path = RefPath(method[RefPath.X_LOCATION][RefPath.REF])
 
-                all_references = list(set(_gen_dict_extract(RefPath.REF, method)))
-                schema_name = _get_schema_only(all_references)
+                all_references = list(set(gen_dict_extract(RefPath.REF, method)))
+                schema_name = get_schema_only(all_references)
 
                 methods.append(Method(path_name, method_name, ref_path, '', schema_name, method))
 
@@ -273,8 +273,8 @@ def _adjust_schema_levels(template):
         for method_name, method in path.items():
             ref_path = RefPath(method[RefPath.X_LOCATION][RefPath.REF])
 
-            all_references = list(set(_gen_dict_extract(RefPath.REF, method)))
-            schema_name = _get_schema_only(all_references)
+            all_references = list(set(gen_dict_extract(RefPath.REF, method)))
+            schema_name = get_schema_only(all_references)
 
             methods.append(Method(path_name, method_name, ref_path, method["x-metrics"]["load"], schema_name, method))
 
@@ -346,8 +346,8 @@ def _derive_components(single_data_obj):
         for method_name, method in path.items():
             ref_path = RefPath(method[RefPath.X_LOCATION][RefPath.REF])
 
-            all_references = list(set(_gen_dict_extract('$ref', method)))
-            schema_name = _get_schema_only(all_references)
+            all_references = list(set(gen_dict_extract('$ref', method)))
+            schema_name = get_schema_only(all_references)
 
             methods.append(
                 Method(path_name, method_name, ref_path, method["x-metrics"]["load"], schema_name, method))
