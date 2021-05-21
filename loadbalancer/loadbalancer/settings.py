@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'deployment_generator',
     'devops',
+    'users',
     'monitoring_app'
 ]
 
