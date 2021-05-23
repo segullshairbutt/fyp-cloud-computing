@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/3.1/ref/settings/
 import sys
 from datetime import timedelta
 from pathlib import Path
+import environ
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -29,8 +30,11 @@ DEBUG = True
 ALLOWED_HOSTS = []
 
 
-# Application definition
+env = environ.Env()
+environ.Env.read_env()
 
+
+# Application definition
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -43,7 +47,7 @@ INSTALLED_APPS = [
     'deployment_generator',
     'devops',
     'users',
-    'monitoring_app'
+    'monitoring_app',
 ]
 
 MIDDLEWARE = [
@@ -107,6 +111,12 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    )
+}
+
 CORS_ALLOW_ALL_ORIGINS = True
 
 # Internationalization
@@ -128,56 +138,56 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 
-LOGGING = {
-    'version': 1,
-    'color': {
-        '()': 'colorlog.ColoredFormatter',
-        'format': '%(log_color)s%(levelname)-8s %(message)s',
-        'log_colors': {
-            'DEBUG':    'bold_black',
-            'INFO':     'white',
-            'WARNING':  'yellow',
-            'ERROR':    'red',
-            'CRITICAL': 'bold_red',
-        },
-    },
-    'formatters': {
-        'verbose': {
-            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
-            'style': '{',
-        },
-        'medium': {
-            'format': '{levelname} {asctime} {module} - {message}',
-            'style': '{',
-        },
-        'simple': {
-            'format': '{levelname} {asctime} - {message}',
-            'style': '{',
-        }
-    },
-    'handlers': {
-        'console': {
-            'class': 'logging.StreamHandler',
-            'stream': sys.stdout,
-            'formatter': 'simple'
-        },
-        'mid-verbose-console': {
-            'class': 'logging.StreamHandler',
-            'stream': sys.stdout,
-            'formatter': 'medium'
-        }
-    },
-    'loggers': {
-        'root': {
-            'handlers': ['console'],
-            'level': 'INFO'
-        },
-        'mid-verbose': {
-            'handlers': ['mid-verbose-console'],
-            'level': 'INFO'
-        }
-    }
-}
+# LOGGING = {
+#     'version': 1,
+#     'color': {
+#         '()': 'colorlog.ColoredFormatter',
+#         'format': '%(log_color)s%(levelname)-8s %(message)s',
+#         'log_colors': {
+#             'DEBUG':    'bold_black',
+#             'INFO':     'white',
+#             'WARNING':  'yellow',
+#             'ERROR':    'red',
+#             'CRITICAL': 'bold_red',
+#         },
+#     },
+#     'formatters': {
+#         'verbose': {
+#             'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+#             'style': '{',
+#         },
+#         'medium': {
+#             'format': '{levelname} {asctime} {module} - {message}',
+#             'style': '{',
+#         },
+#         'simple': {
+#             'format': '{levelname} {asctime} - {message}',
+#             'style': '{',
+#         }
+#     },
+#     'handlers': {
+#         'console': {
+#             'class': 'logging.StreamHandler',
+#             'stream': sys.stdout,
+#             'formatter': 'simple'
+#         },
+#         'mid-verbose-console': {
+#             'class': 'logging.StreamHandler',
+#             'stream': sys.stdout,
+#             'formatter': 'medium'
+#         }
+#     },
+#     'loggers': {
+#         'root': {
+#             'handlers': ['console'],
+#             'level': 'INFO'
+#         },
+#         'mid-verbose': {
+#             'handlers': ['mid-verbose-console'],
+#             'level': 'INFO'
+#         }
+#     }
+# }
 
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=5),
@@ -208,4 +218,13 @@ SIMPLE_JWT = {
     'SLIDING_TOKEN_REFRESH_LIFETIME': timedelta(days=1),
 }
 
-DOCKER_IMAGE_NAME = "segullshairbutt/website"
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_USE_TLS = True
+EMAIL_PORT = 587
+EMAIL_HOST_USER = env('EMAIL_USERNAME')
+EMAIL_HOST_PASSWORD = env('EMAIL_PASSWORD')
+
+DOCKER_IMAGE_NAME = env('DOCKER_IMAGE_NAME')
+FRONT_END_APP = env('REACT_APP')
+
