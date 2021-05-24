@@ -116,7 +116,7 @@ const ProjectForm = (props) => {
         invalidForm={formError}
         formErrors={props.formSubmitErrors}
       />
-      <form onSubmit={handleSubmit(submitNodesHandler)}>
+      {/* <form onSubmit={handleSubmit(submitNodesHandler)}>
         <NodeFields
           append={appendNode}
           fields={fields}
@@ -125,7 +125,7 @@ const ProjectForm = (props) => {
           remove={remove}
           isSaving={saving}
         />
-      </form>
+      </form> */}
       <pre>{fileText}</pre>
     </div>
   );

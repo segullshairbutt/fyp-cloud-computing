@@ -56,7 +56,7 @@ export default function SignIn() {
   const loggedIn = useSelector((state) => state.auth.object !== null);
 
   const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState("");
   const [errors, setErrors] = useState("");
 
   useEffect(() => {
@@ -66,10 +66,11 @@ export default function SignIn() {
   const submitHandler = (e) => {
     e.preventDefault();
 
-    if (username === "" || password === "") {
-      setErrors("username and password can't be empty.");
+    if (username === "" || email === "") {
+      setErrors("username and email can't be empty.");
     } else {
-      dispatch(login(username, password));
+      //   dispatch(login(username, email));
+      console.log("dispatch to reset password");
     }
   };
 
@@ -82,7 +83,7 @@ export default function SignIn() {
           <LockOutlinedIcon />
         </Avatar>
         <Typography component="h1" variant="h5">
-          Sign in
+          Reset Password
         </Typography>
         <Typography
           component="small"
@@ -99,8 +100,8 @@ export default function SignIn() {
             required
             fullWidth
             id="email"
-            label="Email Username"
-            name="email"
+            label="Username"
+            name="username"
             autoComplete="email"
             autoFocus
             value={username}
@@ -111,13 +112,12 @@ export default function SignIn() {
             margin="normal"
             required
             fullWidth
-            name="password"
-            label="Password"
-            type="password"
-            id="password"
+            name="email"
+            label="Email"
+            type="email"
             autoComplete="current-password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
           />
           {/* <FormControlLabel
             control={<Checkbox value="remember" color="primary" />}
@@ -130,20 +130,8 @@ export default function SignIn() {
             color="primary"
             className={classes.submit}
           >
-            Sign in
+            Send Confirmation Link
           </Button>
-          <Grid container>
-            <Grid item xs>
-              <Link href="#" variant="body2">
-                Forgot password?
-              </Link>
-            </Grid>
-            <Grid item>
-              <RouterLink to="/signup">
-                <Link variant="body2">{"Don't have an account? Sign Up"}</Link>
-              </RouterLink>
-            </Grid>
-          </Grid>
         </form>
       </div>
       <Box mt={8}>

@@ -13,7 +13,7 @@ import { makeStyles } from "@material-ui/core/styles";
 import Container from "@material-ui/core/Container";
 import { useDispatch, useSelector } from "react-redux";
 
-import { login } from "../../store/actions/authActions";
+import { signup } from "../../store/actions/authActions";
 
 function Copyright() {
   return (
@@ -57,6 +57,7 @@ export default function SignIn() {
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [errors, setErrors] = useState("");
 
   useEffect(() => {
@@ -66,10 +67,12 @@ export default function SignIn() {
   const submitHandler = (e) => {
     e.preventDefault();
 
-    if (username === "" || password === "") {
+    if (username === "" || password === "" || confirmPassword === "") {
       setErrors("username and password can't be empty.");
     } else {
-      dispatch(login(username, password));
+      if (password !== confirmPassword)
+        setErrors("password and confirm password don't match.");
+      else dispatch(signup(username, password));
     }
   };
 
@@ -82,7 +85,7 @@ export default function SignIn() {
           <LockOutlinedIcon />
         </Avatar>
         <Typography component="h1" variant="h5">
-          Sign in
+          Create Account
         </Typography>
         <Typography
           component="small"
@@ -119,6 +122,19 @@ export default function SignIn() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
+          <TextField
+            variant="outlined"
+            margin="normal"
+            required
+            fullWidth
+            name="password"
+            label="Confirm Password"
+            type="password"
+            id="password"
+            autoComplete="current-password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+          />
           {/* <FormControlLabel
             control={<Checkbox value="remember" color="primary" />}
             label="Remember me"
@@ -130,7 +146,7 @@ export default function SignIn() {
             color="primary"
             className={classes.submit}
           >
-            Sign in
+            Create Account
           </Button>
           <Grid container>
             <Grid item xs>
@@ -139,8 +155,10 @@ export default function SignIn() {
               </Link>
             </Grid>
             <Grid item>
-              <RouterLink to="/signup">
-                <Link variant="body2">{"Don't have an account? Sign Up"}</Link>
+              <RouterLink to="/login">
+                <Link variant="body2">
+                  {"Already have an account? Sign in"}
+                </Link>
               </RouterLink>
             </Grid>
           </Grid>

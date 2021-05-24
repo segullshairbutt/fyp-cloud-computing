@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 
 import axios from '../custom-axios';
-import ProjectDetailComponent from '../../components/ProjectDetail';
+import ProjectDetailComponent from '../../components/ProjectDetail/ProjectDetail';
 
 const ProjectDetail = (props) => {
   const [ project, setProject ] = useState(null);

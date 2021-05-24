@@ -24,7 +24,7 @@ const ProjectList = (props) => {
   const classes = useRowStyles();
   const [ deleteProjectId, setDeleteProjectId ] = useState(false);
   const [ projectForm, setProjectForm ] = useState(false);
-  let formTitle = 'Project Form';
+  let formTitle = '';
 
   const disagreed = () => {
     setDeleteProjectId(0);

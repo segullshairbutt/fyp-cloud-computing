@@ -13,7 +13,7 @@ import { makeStyles } from "@material-ui/core/styles";
 import Container from "@material-ui/core/Container";
 import { useDispatch, useSelector } from "react-redux";
 
-import { login } from "../../store/actions/authActions";
+import { signup } from "../../store/actions/authActions";
 
 function Copyright() {
   return (
@@ -48,15 +48,14 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-export default function SignIn() {
+export default function ChangePassword({ token }) {
   const classes = useStyles();
   const dispatch = useDispatch();
 
   const reduxError = useSelector((state) => state.auth.error);
-  const loggedIn = useSelector((state) => state.auth.object !== null);
 
-  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [errors, setErrors] = useState("");
 
   useEffect(() => {
@@ -66,23 +65,27 @@ export default function SignIn() {
   const submitHandler = (e) => {
     e.preventDefault();
 
-    if (username === "" || password === "") {
-      setErrors("username and password can't be empty.");
+    if (password === "" || confirmPassword === "") {
+      setErrors("password and confirm password can't be empty.");
     } else {
-      dispatch(login(username, password));
+      if (password !== confirmPassword)
+        setErrors("password and confirm password don't match.");
+      else {
+        console.log("Dispatch to change password.");
+        // dispatch(signup(username, password));}
+      }
     }
   };
 
   return (
     <Container component="main" maxWidth="xs">
-      {loggedIn && <Redirect />}
       <CssBaseline />
       <div className={classes.paper}>
         <Avatar className={classes.avatar}>
           <LockOutlinedIcon />
         </Avatar>
         <Typography component="h1" variant="h5">
-          Sign in
+          Change Password
         </Typography>
         <Typography
           component="small"
@@ -98,19 +101,6 @@ export default function SignIn() {
             margin="normal"
             required
             fullWidth
-            id="email"
-            label="Email Username"
-            name="email"
-            autoComplete="email"
-            autoFocus
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-          />
-          <TextField
-            variant="outlined"
-            margin="normal"
-            required
-            fullWidth
             name="password"
             label="Password"
             type="password"
@@ -119,10 +109,20 @@ export default function SignIn() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
-          {/* <FormControlLabel
-            control={<Checkbox value="remember" color="primary" />}
-            label="Remember me"
-          /> */}
+          <TextField
+            variant="outlined"
+            margin="normal"
+            required
+            fullWidth
+            name="password"
+            label="Confirm Password"
+            type="password"
+            id="password"
+            autoComplete="current-password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+          />
+
           <Button
             type="submit"
             fullWidth
@@ -130,20 +130,8 @@ export default function SignIn() {
             color="primary"
             className={classes.submit}
           >
-            Sign in
+            Change Password
           </Button>
-          <Grid container>
-            <Grid item xs>
-              <Link href="#" variant="body2">
-                Forgot password?
-              </Link>
-            </Grid>
-            <Grid item>
-              <RouterLink to="/signup">
-                <Link variant="body2">{"Don't have an account? Sign Up"}</Link>
-              </RouterLink>
-            </Grid>
-          </Grid>
         </form>
       </div>
       <Box mt={8}>
