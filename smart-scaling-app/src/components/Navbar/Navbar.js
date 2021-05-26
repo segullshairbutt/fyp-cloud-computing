@@ -80,11 +80,18 @@ export default function MenuAppBar({ auth }) {
               onClose={handleClose}
             >
               {auth ? (
-                <MenuItem onClick={handleClose}>
-                  <Link to="/change-password" className={classes.linkStyle}>
-                    Change Password
-                  </Link>
-                </MenuItem>
+                <React.Fragment>
+                  <MenuItem onClick={handleClose}>
+                    <Link to="/change-password" className={classes.linkStyle}>
+                      Change Password
+                    </Link>
+                  </MenuItem>
+                  <MenuItem onClick={handleClose}>
+                    <Link to="/logout" className={classes.linkStyle}>
+                      Logout
+                    </Link>
+                  </MenuItem>
+                </React.Fragment>
               ) : (
                 <MenuItem onClick={handleClose}>
                   <Link to="/login" className={classes.linkStyle}>

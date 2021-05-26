@@ -1,12 +1,10 @@
 import React, { useState } from "react";
 import { makeStyles } from "@material-ui/core/styles";
 import Grid from "@material-ui/core/Grid";
-
-import Aux from "../hoc/Auxx";
 import Topbar from "./Topbar";
 import TreeView from "./TreeView";
 import ConfirmationDialog from "../UI/ConfirmationDialog";
-import { Button, Paper } from "@material-ui/core";
+import { Button } from "@material-ui/core";
 
 const createNodes = (config) => {
   let rootId = 1;

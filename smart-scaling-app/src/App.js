@@ -24,7 +24,7 @@ function App() {
   }, []);
 
   return [
-    <Navbar />,
+    <Navbar auth={loggedIn} />,
     <Container>
       <Switch>
         <Route path="/:id/swagger/:filename" component={Swagger} />
@@ -33,9 +33,9 @@ function App() {
         <Route path="/change-password" component={ChangePassword} />
         <Route
           path="/change-tokenpwd"
-          render={() => <ChangePassword token="" />}
+          render={(props) => <ChangePassword />}
         />
-        <Route path="/reset-password" component={ResetPassword} />
+        <Route path="/forgot" component={ResetPassword} />
         <Route path="/logout" component={Logout} />
         {/* <ProjectDetail /> */}
         <Route exact path="/" component={ProjectList} />

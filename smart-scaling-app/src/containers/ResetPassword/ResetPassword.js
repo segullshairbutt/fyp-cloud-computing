@@ -13,7 +13,7 @@ import { makeStyles } from "@material-ui/core/styles";
 import Container from "@material-ui/core/Container";
 import { useDispatch, useSelector } from "react-redux";
 
-import { login } from "../../store/actions/authActions";
+import { sendResetToken } from "../../store/actions/authActions";
 
 function Copyright() {
   return (
@@ -53,7 +53,7 @@ export default function SignIn() {
   const dispatch = useDispatch();
 
   const reduxError = useSelector((state) => state.auth.error);
-  const loggedIn = useSelector((state) => state.auth.object !== null);
+  const authSuccess = useSelector((state) => state.auth.success);
 
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
@@ -69,14 +69,14 @@ export default function SignIn() {
     if (username === "" || email === "") {
       setErrors("username and email can't be empty.");
     } else {
-      //   dispatch(login(username, email));
+      dispatch(sendResetToken(username, email));
       console.log("dispatch to reset password");
     }
   };
 
   return (
     <Container component="main" maxWidth="xs">
-      {loggedIn && <Redirect />}
+      {authSuccess && <Redirect />}
       <CssBaseline />
       <div className={classes.paper}>
         <Avatar className={classes.avatar}>

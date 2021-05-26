@@ -1,34 +1,26 @@
-import React, { useState } from 'react';
-import * as yup from 'yup';
-import { useForm, useFieldArray } from 'react-hook-form';
-import { Typography, Grid, Button, CssBaseline } from '@material-ui/core';
+import React, { useState } from "react";
+import * as yup from "yup";
+import { Typography, Grid, Button, CssBaseline } from "@material-ui/core";
 
-import FormikForm from '../UI/Form/FormikForm';
+import FormikForm from "../UI/Form/FormikForm";
 
 const projectControls = [
   {
-    controltype: 'input',
-    name: 'Name',
-    placeholder: 'Name',
-    errorLabel: true
-  }
+    controltype: "input",
+    name: "Name",
+    placeholder: "Name",
+    errorLabel: true,
+  },
 ];
 const projectSchema = yup.object().shape({
-  Name: yup.string().required()
+  Name: yup.string().required(),
 });
 
 const ProjectForm = (props) => {
-  const [ fileName, setFileName ] = useState('Upload');
-  const [ formError, setFormError ] = useState(false);
-  const [ submitDisabled, setSubmitDisabled ] = useState(false);
-  const [ saving, setSaving ] = useState(false);
-  const [ fileText, setFileText ] = useState('');
-  const { register, handleSubmit, control } = useForm();
-  const { fields, append, remove } = useFieldArray({
-    control,
-    name: 'nodes'
-  });
-  const [ nodes, setNodes ] = useState([]);
+  const [fileName, setFileName] = useState("Upload");
+  const [formError, setFormError] = useState(false);
+  const [submitDisabled, setSubmitDisabled] = useState(false);
+  const [fileText, setFileText] = useState("");
 
   const fileUploadChanged = (e) => {
     const file = e.target.files[0];
@@ -43,8 +35,8 @@ const ProjectForm = (props) => {
     }
   };
   const formCancelled = () => {
-    setFileText('');
-    setFileName('Upload');
+    setFileText("");
+    setFileName("Upload");
     props.cancelled();
   };
   // it means that form is submitted and saved succesfully
@@ -61,10 +53,9 @@ const ProjectForm = (props) => {
     if (!(fileName && fileText)) {
       setFormError(true);
     } else {
-      const obj = {
-        worker_nodes: [ ...nodes ],
+      const obj = {        
         name: values.Name,
-        initial_config: JSON.parse(fileText)
+        initial_config: JSON.parse(fileText),
       };
       props.submitted(obj);
       setSubmitDisabled(true);
@@ -72,17 +63,8 @@ const ProjectForm = (props) => {
     }
   };
 
-  const submitNodesHandler = (fields) => {
-    setSaving(true);
-    setNodes(fields.nodes);
-  };
-  const appendNode = (field) => {
-    setSaving(false);
-    append(field);
-  };
-
   return (
-    <div style={{ padding: 16, margin: 'auto', maxWidth: 600 }}>
+    <div style={{ padding: 16, margin: "auto", maxWidth: 600 }}>
       <CssBaseline />
       <Typography variant="h4" align="center" component="h1" gutterBottom>
         Smart Horizontal and Vertical Scaling Application

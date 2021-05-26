@@ -53,7 +53,7 @@ export default function SignIn() {
   const dispatch = useDispatch();
 
   const reduxError = useSelector((state) => state.auth.error);
-  const loggedIn = useSelector((state) => state.auth.object !== null);
+  const authSuccess = useSelector((state) => state.auth.success);
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -78,7 +78,7 @@ export default function SignIn() {
 
   return (
     <Container component="main" maxWidth="xs">
-      {loggedIn && <Redirect />}
+      {authSuccess && <Redirect />}
       <CssBaseline />
       <div className={classes.paper}>
         <Avatar className={classes.avatar}>
@@ -101,10 +101,7 @@ export default function SignIn() {
             margin="normal"
             required
             fullWidth
-            id="email"
-            label="Email Username"
-            name="email"
-            autoComplete="email"
+            label="Username"
             autoFocus
             value={username}
             onChange={(e) => setUsername(e.target.value)}

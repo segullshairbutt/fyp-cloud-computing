@@ -2,6 +2,7 @@ from django.contrib.auth.models import User
 from django.http import JsonResponse, HttpResponse
 from django.conf import settings
 from django.core.mail import send_mail
+from jwt import DecodeError
 from rest_framework import generics, status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
@@ -51,9 +52,9 @@ def change_password(request):
     return HttpResponse(status=status.HTTP_200_OK)
 
 
-def email_now(email, form_id):
+def email_now(email, token):
     message = f"""Click on the link below to reset your password. 
-{settings.FRONT_END_APP}/?id={form_id}"""
+{settings.FRONT_END_APP}/change-password?token={token}"""
 
     send_mail("Reset Password for Smart Scaling App", message, settings.EMAIL_HOST_USER, [email], fail_silently=False)
 
@@ -84,13 +85,15 @@ def forget_password(request):
     return response
 
 
-@api_view(['POST'])
+@api_view(['PUT'])
 def change_password_by_token(request):
     token = request.data['token']
     password = request.data['password']
-
-    decoded_token = jwt.decode(token, settings.SECRET_KEY, "HS256")
-    user_id = decoded_token['id']
+    try:
+        decoded_token = jwt.decode(token, settings.SECRET_KEY, "HS256")
+        user_id = decoded_token['id']
+    except DecodeError:
+        return Response(data={"error": "invalid token provided"}, status=status.HTTP_400_BAD_REQUEST)
 
     user = User.objects.get(id=user_id)
     user.set_password(password)

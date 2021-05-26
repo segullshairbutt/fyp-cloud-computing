@@ -4,16 +4,15 @@ import Button from "@material-ui/core/Button";
 import CssBaseline from "@material-ui/core/CssBaseline";
 import TextField from "@material-ui/core/TextField";
 import Link from "@material-ui/core/Link";
-import Grid from "@material-ui/core/Grid";
 import Box from "@material-ui/core/Box";
-import { Link as RouterLink, Redirect } from "react-router-dom";
 import LockOutlinedIcon from "@material-ui/icons/LockOutlined";
 import Typography from "@material-ui/core/Typography";
 import { makeStyles } from "@material-ui/core/styles";
 import Container from "@material-ui/core/Container";
 import { useDispatch, useSelector } from "react-redux";
 
-import { signup } from "../../store/actions/authActions";
+import { changePassword } from "../../store/actions/authActions";
+import { Redirect } from "react-router";
 
 function Copyright() {
   return (
@@ -48,19 +47,29 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-export default function ChangePassword({ token }) {
+export default function ChangePassword(props) {
   const classes = useStyles();
   const dispatch = useDispatch();
 
   const reduxError = useSelector((state) => state.auth.error);
+  const authSuccess = useSelector((state) => state.auth.success);
 
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [errors, setErrors] = useState("");
+  const [token, setToken] = useState(null);
 
   useEffect(() => {
     setErrors(reduxError);
   }, [reduxError]);
+
+  useEffect(() => {
+    let params = new URLSearchParams(props.location.search);
+    let token = params.get("token");
+    if (token) {
+      setToken(token);
+    }
+  }, []);
 
   const submitHandler = (e) => {
     e.preventDefault();
@@ -71,6 +80,7 @@ export default function ChangePassword({ token }) {
       if (password !== confirmPassword)
         setErrors("password and confirm password don't match.");
       else {
+        dispatch(changePassword(password, token));
         console.log("Dispatch to change password.");
         // dispatch(signup(username, password));}
       }
@@ -80,6 +90,7 @@ export default function ChangePassword({ token }) {
   return (
     <Container component="main" maxWidth="xs">
       <CssBaseline />
+      {authSuccess && <Redirect />}
       <div className={classes.paper}>
         <Avatar className={classes.avatar}>
           <LockOutlinedIcon />

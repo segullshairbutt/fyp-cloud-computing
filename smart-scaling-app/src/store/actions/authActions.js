@@ -13,7 +13,7 @@ export const signup = (username, password) => {
   return (dispatch) => {
     dispatch({ type: AUTH_START });
     axios
-      .post("/api/auth/signup/", { username, password })
+      .post("/api/auth/signup", { username, password })
       .then((res) => {
         dispatch({ type: SIGNUP_SUCCESS });
 
@@ -23,9 +23,58 @@ export const signup = (username, password) => {
       })
       .catch((err) => {
         let errors = err?.response?.data?.errors;
-                
-        let errorMap = Object.values(errors).map(fieldValue => fieldValue[0])
-        dispatch({ type: ERROR, payload:  errorMap});
+
+        let errorMap = Object.values(errors).map((fieldValue) => fieldValue[0]);
+        dispatch({ type: ERROR, payload: errorMap });
+      });
+  };
+};
+
+export const sendResetToken = (username, email) => {
+  return (dispatch) => {
+    dispatch({ type: AUTH_START });
+
+    axios
+      .post("/api/auth/forgot", { email, username })
+      .then((res) => {
+        dispatch({ type: SIGNUP_SUCCESS });
+
+        setTimeout(() => {
+          dispatch({ type: RESET });
+        }, 2000);
+      })
+      .catch((err) => {
+        console.log(err.response?.data);
+        dispatch({ type: ERROR, payload: err.response.data?.error });
+      });
+  };
+};
+
+export const changePassword = (password, token) => {
+  return (dispatch) => {
+    dispatch({ type: AUTH_START });
+    let data = {};
+    let url = "/api/auth/change-password";
+
+    if (token) {
+      data = { password, token };
+      url += "/token";
+    } else {
+      data = { password };
+    }
+
+    axios
+      .put(url, data)
+      .then(() => {
+        dispatch({ type: AUTH_SUCCESS });
+
+        setTimeout(() => {
+          dispatch({ type: RESET });
+        }, 2000);
+      })
+      .catch((err) => {
+        console.log(err.response?.data);
+        dispatch({ type: ERROR, payload: "Error during updating password." });
       });
   };
 };
