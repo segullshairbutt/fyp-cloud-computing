@@ -3,7 +3,6 @@ import * as yup from 'yup';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { Typography, Grid, Button, CssBaseline } from '@material-ui/core';
 
-import NodeFields from './NodeFields';
 import FormikForm from '../UI/Form/FormikForm';
 
 const projectControls = [
@@ -59,7 +58,7 @@ const ProjectForm = (props) => {
   }
 
   const formSubmitHandler = (values) => {
-    if (!(nodes.length && fileName && fileText)) {
+    if (!(fileName && fileText)) {
       setFormError(true);
     } else {
       const obj = {

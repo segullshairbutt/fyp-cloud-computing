@@ -163,7 +163,7 @@ export default function ProjectDetails(props) {
                 onClick={props.started}
                 disabled={props.buttonsDisabled}
               >
-              <a href="http://localhost:8000/api/projects/38/download" download target="_blank">
+              <a href={`http://localhost:8000/api/projects/${props.project.id}/download`} download target="_blank">
                 Download Latest Deployments
                 </a>
               </Button>
