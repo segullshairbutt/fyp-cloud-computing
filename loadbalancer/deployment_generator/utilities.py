@@ -63,14 +63,17 @@ def create_server_stubs(app_name, project_id, source_config_file_path, project_d
     # creating the helm templates
     templates = ""
     for cl_name, cluster in new_template_paths.items():
-        count = 0
+        wn_count = 0
         for wn_name, pods in cluster.items():
-            count += 1
+            wn_count += 1
+
+            pod_count = 0
             for pod_name, containers in pods.items():
+                pod_count += 1
                 containers = list(containers.values())
                 if containers:
                     templates = templates + get_deployment_template(
-                        app_name, containers, wn_name, count) + "\n"
+                        app_name, containers, wn_name, wn_count, pod_count) + "\n"
 
     # removing all deployments that are made before
     helm_chart_template_path = os.path.join(project_directory, ProjectPaths.HELM_CHARTS, ProjectPaths.TEMPLATES)
@@ -102,19 +105,20 @@ def create_server_stubs(app_name, project_id, source_config_file_path, project_d
 
     LOGGER.info("Getting the service url and adding it to template")
     for cl, wns in new_template_paths.items():
+        cmd = ["minikube", "ip"]
+        output = subprocess.Popen(cmd, stdout=subprocess.PIPE).communicate()[0]
+        cluster_ip = output.strip()
+        url = cluster_ip.decode("utf-8")
+        LOGGER.info(f"minikube cluster ip is: {url}")
+
         for wn, pods in wns.items():
             for pod, single_container in pods.items():
                 for container_name, config in single_container.items():
                     print("CONTAINER NAME: " + config["name"])
-                    cmd = ["minikube", "service", f"service-{config['name'].replace('_', '-')}", "--url"]
-                    output = subprocess.Popen(cmd, stdout=subprocess.PIPE).communicate()[0]
-                    service_url = output.strip()
 
-                    LOGGER.info(f"url for service-{config['name'].replace('_', '-')} is {service_url}")
                     with open(os.path.join(new_config_files_path, config["name"] + ".json"), "r+") as template_file:
                         template_data = json.load(template_file)
-                        url = service_url.decode("utf-8")
-                        template_data["servers"][0]["url"] = f"{url}/{config['context_path']}/"
+                        template_data["servers"][0]["url"] = f"{url}/{config['context_path']}"
 
                         template_file.seek(0)
 

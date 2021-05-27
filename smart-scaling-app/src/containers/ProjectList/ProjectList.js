@@ -13,9 +13,9 @@ const converErrorIntoArray = (err) => {
         const errorData = err.response.data;
         const keys = Object.keys(errorData);
 
-        const allErrors = keys.map((key) => [
-          ...errorData[key].map((error) => key + ": " + error),
-        ]);
+        const allErrors = keys?.map((key) =>
+          errorData[key]?.map((error) => key + ": " + error)
+        );
         return allErrors.flat(1);
       }
     }

@@ -4,12 +4,12 @@ VERBOSE_LOGGER = logging.getLogger("mid-verbose")
 LOGGER = logging.getLogger("root")
 
 
-def get_deployment_template(app_name, containers_config, wn_name, count):
-    VERBOSE_LOGGER.info(f"Started getting deployment for {wn_name}-{str(count)}.")
+def get_deployment_template(app_name, containers_config, wn_name, wn_count, pod_count):
+    VERBOSE_LOGGER.info(f"Started getting deployment for {wn_name}-{str(wn_count)}.")
     tag = containers_config[0]['tag']
     app_name = app_name.replace("_", "-")
 
-    app_selector = f"{app_name}-{tag}-{count}"
+    app_selector = f"{app_name}-{wn_count}-{pod_count}"
 
     containers = ""
     services = ""

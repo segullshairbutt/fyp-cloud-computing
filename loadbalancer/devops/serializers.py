@@ -11,7 +11,7 @@ from monitoring_app.utilities import get_latest_filetag
 class ProjectSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=50)
     initial_config = serializers.JSONField()
-    worker_nodes = serializers.JSONField()
+    # worker_nodes = serializers.JSONField()
 
 
 class ProjectModelSerializer(serializers.ModelSerializer):

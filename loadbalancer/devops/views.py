@@ -54,8 +54,7 @@ class ProjectCreateView(views.APIView):
         else:
             data = serializer.data
             try:
-                project = openapi_service.create_project(
-                    data["name"], data["initial_config"], data["worker_nodes"])
+                project = openapi_service.create_project(data["name"], data["initial_config"])
             except IsADirectoryError:
                 return Response(status=status.HTTP_400_BAD_REQUEST,
                                 data={"error": "A project with this name already exists."})
