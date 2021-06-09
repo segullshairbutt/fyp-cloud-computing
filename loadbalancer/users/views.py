@@ -54,7 +54,7 @@ def change_password(request):
 
 def email_now(email, token):
     message = f"""Click on the link below to reset your password. 
-{settings.FRONT_END_APP}/change-password?token={token}"""
+{settings.FRONT_END_APP}/change-tokenpwd?token={token}"""
 
     send_mail("Reset Password for Smart Scaling App", message, settings.EMAIL_HOST_USER, [email], fail_silently=False)
 
