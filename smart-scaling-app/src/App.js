@@ -30,7 +30,7 @@ function App() {
         <Route path="/login" component={Login} />
 
         <Route path="/signup" component={Signup} />
-        <Route path="/change-tokenpwd" render={(props) => <ChangePassword />} />
+        <Route path="/change-tokenpwd" component={ChangePassword} />
         <Route path="/forgot" component={ResetPassword} />
 
         {loggedIn && (
