@@ -81,6 +81,11 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'loadbalancer.wsgi.application'
 
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ],
+}
 
 # Database
 # https://docs.djangoproject.com/en/3.1/ref/settings/#databases
@@ -111,12 +116,6 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
-    )
-}
-
 CORS_ALLOW_ALL_ORIGINS = True
 
 # Internationalization
@@ -138,56 +137,56 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 
-LOGGING = {
-    'version': 1,
-    'color': {
-        '()': 'colorlog.ColoredFormatter',
-        'format': '%(log_color)s%(levelname)-8s %(message)s',
-        'log_colors': {
-            'DEBUG':    'bold_black',
-            'INFO':     'white',
-            'WARNING':  'yellow',
-            'ERROR':    'red',
-            'CRITICAL': 'bold_red',
-        },
-    },
-    'formatters': {
-        'verbose': {
-            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
-            'style': '{',
-        },
-        'medium': {
-            'format': '{levelname} {asctime} {module} - {message}',
-            'style': '{',
-        },
-        'simple': {
-            'format': '{levelname} {asctime} - {message}',
-            'style': '{',
-        }
-    },
-    'handlers': {
-        'console': {
-            'class': 'logging.StreamHandler',
-            'stream': sys.stdout,
-            'formatter': 'simple'
-        },
-        'mid-verbose-console': {
-            'class': 'logging.StreamHandler',
-            'stream': sys.stdout,
-            'formatter': 'medium'
-        }
-    },
-    'loggers': {
-        'root': {
-            'handlers': ['console'],
-            'level': 'INFO'
-        },
-        'mid-verbose': {
-            'handlers': ['mid-verbose-console'],
-            'level': 'INFO'
-        }
-    }
-}
+# LOGGING = {
+#     'version': 1,
+#     'color': {
+#         '()': 'colorlog.ColoredFormatter',
+#         'format': '%(log_color)s%(levelname)-8s %(message)s',
+#         'log_colors': {
+#             'DEBUG':    'bold_black',
+#             'INFO':     'white',
+#             'WARNING':  'yellow',
+#             'ERROR':    'red',
+#             'CRITICAL': 'bold_red',
+#         },
+#     },
+#     'formatters': {
+#         'verbose': {
+#             'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+#             'style': '{',
+#         },
+#         'medium': {
+#             'format': '{levelname} {asctime} {module} - {message}',
+#             'style': '{',
+#         },
+#         'simple': {
+#             'format': '{levelname} {asctime} - {message}',
+#             'style': '{',
+#         }
+#     },
+#     'handlers': {
+#         'console': {
+#             'class': 'logging.StreamHandler',
+#             'stream': sys.stdout,
+#             'formatter': 'simple'
+#         },
+#         'mid-verbose-console': {
+#             'class': 'logging.StreamHandler',
+#             'stream': sys.stdout,
+#             'formatter': 'medium'
+#         }
+#     },
+#     'loggers': {
+#         'root': {
+#             'handlers': ['console'],
+#             'level': 'INFO'
+#         },
+#         'mid-verbose': {
+#             'handlers': ['mid-verbose-console'],
+#             'level': 'INFO'
+#         }
+#     }
+# }
 
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(hours=1),
@@ -206,12 +205,9 @@ SIMPLE_JWT = {
     'AUTH_HEADER_NAME': 'HTTP_AUTHORIZATION',
     'USER_ID_FIELD': 'id',
     'USER_ID_CLAIM': 'user_id',
-    'USER_AUTHENTICATION_RULE': 'rest_framework_simplejwt.authentication.default_user_authentication_rule',
 
     'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
     'TOKEN_TYPE_CLAIM': 'token_type',
-
-    'JTI_CLAIM': 'jti',
 
     'SLIDING_TOKEN_REFRESH_EXP_CLAIM': 'refresh_exp',
     'SLIDING_TOKEN_LIFETIME': timedelta(minutes=5),

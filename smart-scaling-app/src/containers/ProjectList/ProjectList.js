@@ -1,23 +1,21 @@
 import { useEffect, useState } from "react";
 import produce from "immer";
 
-import axios from "../custom-axios";
+import axios from "../../store/custom-axios";
 import ProjectListComponent from "../../components/ProjectList";
 
 const converErrorIntoArray = (err) => {
-  if (err.response) {
-    if (err.response.data) {
-      if (err.response.data.error) {
-        return [err.response.data.error];
-      } else {
-        const errorData = err.response.data;
-        const keys = Object.keys(errorData);
+  if (err?.response?.data) {
+    if (err.response?.data?.error) {
+      return [err.response.data.error];
+    } else {
+      const errorData = err?.response?.data;
+      const keys = Object.keys(errorData);
 
-        const allErrors = keys?.map((key) =>
-          errorData[key]?.map((error) => key + ": " + error)
-        );
-        return allErrors.flat(1);
-      }
+      const allErrors = keys?.map((key) =>
+        errorData[key]?.map((error) => key + ": " + error)
+      );
+      return allErrors.flat(1);
     }
   } else {
     return [err.message];

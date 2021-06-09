@@ -4,6 +4,7 @@ from django.http import HttpResponse
 from rest_framework import views, generics, status
 from rest_framework.response import Response
 from rest_framework.decorators import api_view
+from rest_framework.permissions import IsAuthenticated
 
 from devops import openapi_service
 from devops.models import Project
@@ -12,8 +13,11 @@ from devops.resources_service import get_latest_filetag
 
 
 class ProjectListView(generics.ListAPIView):
-    queryset = Project.objects.all()
+    permission_classes = IsAuthenticated,
     serializer_class = ProjectModelSerializer
+
+    def get_queryset(self):
+        return Project.objects.filter(username=self.request.user.username)
 
 
 class ProjectDetailView(generics.RetrieveDestroyAPIView):
@@ -47,6 +51,8 @@ def get_deployments_download_link(request, project_id):
 
 
 class ProjectCreateView(views.APIView):
+    permission_classes = IsAuthenticated,
+
     def post(self, request):
         serializer = ProjectSerializer(data=request.data)
         if not serializer.is_valid():
@@ -54,7 +60,8 @@ class ProjectCreateView(views.APIView):
         else:
             data = serializer.data
             try:
-                project = openapi_service.create_project(data["name"], data["initial_config"])
+                project = openapi_service.create_project(
+                    request.user.username, data["name"], data["initial_config"])
             except IsADirectoryError:
                 return Response(status=status.HTTP_400_BAD_REQUEST,
                                 data={"error": "A project with this name already exists."})

@@ -18,7 +18,7 @@ VERBOSE_LOGGER = logging.getLogger("mid-verbose")
 LOGGER = logging.getLogger("root")
 
 
-def create_project(project_name, initial_config):
+def create_project(username, project_name, initial_config):
     VERBOSE_LOGGER.info("creating project...")
     project_name = project_name.lower()
     project_directory = os.path.join(str(os.getcwd()).split("/loadbalancer")[0], USERNAME, project_name)
@@ -41,7 +41,7 @@ def create_project(project_name, initial_config):
     project.initial_config = initial_config
     project.worker_nodes = {}
     project.name = project_name
-    project.username = USERNAME
+    project.username = username
     project.directory = project_directory
 
     os.mkdir(project.config_data_path)

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import SwaggerUI from 'swagger-ui-react';
 import 'swagger-ui-react/swagger-ui.css';
 
-import axios from '../custom-axios';
+import axios from '../../store/custom-axios';
 
 const Swagger = (props) => {
   const [ spec, setSpec ] = useState(null);

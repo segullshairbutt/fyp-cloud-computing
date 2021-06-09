@@ -1,5 +1,5 @@
 import Container from "@material-ui/core/Container";
-import { Route, Switch } from "react-router-dom";
+import { Redirect, Route, Switch } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import { useEffect } from "react";
 
@@ -27,22 +27,27 @@ function App() {
     <Navbar auth={loggedIn} />,
     <Container>
       <Switch>
-        <Route path="/:id/swagger/:filename" component={Swagger} />
         <Route path="/login" component={Login} />
+
         <Route path="/signup" component={Signup} />
-        <Route path="/change-password" component={ChangePassword} />
-        <Route
-          path="/change-tokenpwd"
-          render={(props) => <ChangePassword />}
-        />
+        <Route path="/change-tokenpwd" render={(props) => <ChangePassword />} />
         <Route path="/forgot" component={ResetPassword} />
-        <Route path="/logout" component={Logout} />
-        {/* <ProjectDetail /> */}
-        <Route exact path="/" component={ProjectList} />
-        <Route exact path="/:id" component={ProjectDetail} />
+
+        {loggedIn && (
+          <Aux>
+            <Route path="/change-password" component={ChangePassword} />
+            <Route exact path="/:id" component={ProjectDetail} />
+            <Route exact path="/" component={ProjectList} />
+            <Route path="/logout" component={Logout} />
+            <Route path="/:id/swagger/:filename" component={Swagger} />
+          </Aux>
+        )}
+        <Route component={Login} />
       </Switch>
     </Container>,
   ];
 }
 
 export default App;
+
+const Aux = (props) => props.children;
